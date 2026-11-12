@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-paper text-ink antialiased; }
+}
+
+@layer components {
+  .card { @apply rounded-3xl bg-white shadow-[0_1px_2px_rgba(16,24,42,.04),0_8px_24px_-12px_rgba(16,24,42,.10)]; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-bold transition; }
+  .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
+  .btn-yellow { @apply btn bg-yellow-300 text-ink hover:bg-yellow-200; }
+  .btn-outline { @apply btn border border-ink/20 bg-white text-ink hover:border-ink/40; }
+  .field { @apply w-full rounded-xl border border-transparent bg-slate-100 px-4 py-3 text-[15px] outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white; }
+}
+
+/* Hero / page-banner decorative arcs (pure CSS, no images → fast) */
+.banner-blue { background: linear-gradient(135deg, #2563eb 0%, #1d6ff2 55%, #0ea5e9 130%); }
+.banner-arc::before, .banner-arc::after { content: ""; position: absolute; border-radius: 9999px; pointer-events: none; }
+.banner-arc::before { right: -8%; top: -30%; width: 46%; aspect-ratio: 1; border: 56px solid rgba(14,165,233,.55); }
+.banner-arc::after { right: 14%; bottom: -55%; width: 30%; aspect-ratio: 1; border: 2px solid rgba(255,255,255,.25); }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.hero-seq > * { animation: fade-up .5s ease-out both; }
+.hero-seq > :nth-child(2) { animation-delay: .06s; }
+.hero-seq > :nth-child(3) { animation-delay: .12s; }
+.hero-seq > :nth-child(4) { animation-delay: .18s; }
+.animate-marquee { animation: marquee 40s linear infinite; will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
