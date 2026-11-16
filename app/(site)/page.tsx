@@ -1,9 +1,12 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, BookOpen, Laptop2, Palette, Trophy, UserRound, Medal } from 'lucide-react';
 import Marquee from '@/components/Marquee';
 import NewsCard from '@/components/NewsCard';
 import ContactForm from '@/components/ContactForm';
 import { safeGet, HomeData, mediaUrl, dateLabel } from '@/lib/api';
+import JsonLd from '@/components/JsonLd';
+import { absoluteSiteUrl } from '@/lib/site';
 
 export const revalidate = 60;
 
@@ -20,20 +23,20 @@ export default async function HomePage() {
   const banner = data?.banners?.[0];
   const news = data?.news ?? [];
   const achievements = data?.achievements ?? [];
-  const title = banner?.title || school?.welcome_text || school?.tagline || 'Bilim, tarbiya va kelajak — 51-maktabda.';
   const intro = banner?.subtitle || school?.intro_text || school?.description || '';
   const heroImg = mediaUrl(banner?.image);
   const [first, ...rest] = news;
 
   return (
     <div>
+      {absoluteSiteUrl('/') && <JsonLd data={{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: 'Bosh sahifa', item: absoluteSiteUrl('/') }] }} />}
       {/* Hero */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
         <section className="banner-blue banner-arc relative overflow-hidden rounded-4xl text-white">
           <div className="relative z-10 grid items-center gap-8 px-6 py-12 sm:px-12 lg:grid-cols-[1.1fr_0.9fr] lg:py-0">
             <div className="hero-seq space-y-6 lg:py-20">
               <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold">{school?.district || 'Muzrabot tumani, Surxondaryo viloyati'}</span>
-              <h1 className="max-w-xl text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">{title}</h1>
+              <h1 className="max-w-xl text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">51-sonli maktab — Muzrabot tumani</h1>
               {intro && <p className="line-clamp-4 max-w-lg text-lg leading-relaxed text-white/90">{intro}</p>}
               <div className="flex flex-wrap items-center gap-4 pt-1">
                 <Link href={banner?.link_url || '/aloqa'} className="btn-yellow">{banner?.button_text || 'Murojaat yuborish'} <ArrowRight className="h-4 w-4" /></Link>
@@ -43,7 +46,7 @@ export default async function HomePage() {
             {heroImg && (
               <div className="relative mx-auto w-full max-w-md self-end lg:max-w-none">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={heroImg} alt={banner?.title || ''} fetchPriority="high" decoding="async" className="h-[22rem] w-full rounded-t-[10rem] object-cover lg:h-[30rem]" />
+                <Image src={heroImg} alt="Muzrabot tumani 51-sonli maktabi" fetchPriority="high" priority width={900} height={960} sizes="(max-width: 1024px) 100vw, 50vw" className="h-[22rem] w-full rounded-t-[10rem] object-cover lg:h-[30rem]" />
                 {data && data.teachers_count > 0 && (
                   <div className="absolute -left-2 bottom-8 rounded-2xl bg-white px-5 py-3 text-ink shadow-xl">
                     <p className="text-2xl font-extrabold text-brand-700">{data.teachers_count}</p>
@@ -80,8 +83,7 @@ export default async function HomePage() {
         <div className="card grid gap-8 p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <div className="overflow-hidden rounded-3xl bg-brand-50">
             {mediaUrl(school?.director_photo)
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={mediaUrl(school?.director_photo)!} alt={school?.director_name || ''} loading="lazy" decoding="async" className="h-80 w-full object-cover" />
+              ? <Image src={mediaUrl(school?.director_photo)!} alt={school?.director_name ? `Maktab direktori ${school.director_name}` : '51-sonli maktab direktori'} loading="lazy" width={800} height={800} sizes="(max-width: 1024px) 100vw, 40vw" className="h-80 w-full object-cover" />
               : <div className="flex h-80 items-center justify-center text-brand-300"><UserRound className="h-24 w-24" /></div>}
           </div>
           <div className="space-y-4">
@@ -110,7 +112,7 @@ export default async function HomePage() {
           <>
             <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
               <Link href={`/yangiliklar/${first.slug}`} className="card group relative block min-h-[22rem] overflow-hidden">
-                {mediaUrl(first.image) && /* eslint-disable-next-line @next/next/no-img-element */ <img src={mediaUrl(first.image)!} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />}
+                {mediaUrl(first.image) && <Image src={mediaUrl(first.image)!} alt={first.title} loading="lazy" width={1200} height={800} sizes="(max-width: 1024px) 100vw, 60vw" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 space-y-2 p-6 text-white">
                   <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold">{first.kind_label}</span>

@@ -11,6 +11,9 @@ export function mediaUrl(src: string | null | undefined): string | null {
   return `${API_BASE_URL}${src.startsWith('/') ? '' : '/'}${src}`;
 }
 
+const successfulResponses = new Map<string, { value: unknown; expiresAt: number }>();
+const pendingResponses = new Map<string, Promise<unknown>>();
+
 export async function apiGet<T>(path: string, revalidate: number = REVALIDATE): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -26,13 +29,24 @@ export async function apiGet<T>(path: string, revalidate: number = REVALIDATE): 
   }
 }
 
-/** Xato bo'lsa sahifa yiqilmasin: null qaytaradi. */
+/** Kesh faqat muvaffaqiyatli javoblarni saqlaydi; xatoda avvalgi muvaffaqiyatli javob qaytariladi. */
 export async function safeGet<T>(path: string, revalidate: number = REVALIDATE): Promise<T | null> {
+  const cached = successfulResponses.get(path);
+  if (cached && cached.expiresAt > Date.now()) return cached.value as T;
   try {
-    return await apiGet<T>(path, revalidate);
+    let request = pendingResponses.get(path) as Promise<T> | undefined;
+    if (!request) {
+      request = apiGet<T>(path, revalidate);
+      pendingResponses.set(path, request);
+    }
+    const value = await request;
+    successfulResponses.set(path, { value, expiresAt: Date.now() + Math.max(0, revalidate) * 1000 });
+    return value;
   } catch (error) {
     console.error('API error:', error instanceof Error ? error.message : error);
-    return null;
+    return cached ? cached.value as T : null;
+  } finally {
+    pendingResponses.delete(path);
   }
 }
 

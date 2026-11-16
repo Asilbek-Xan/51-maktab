@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Pin } from 'lucide-react';
 import { dateLabel, mediaUrl, NewsItem } from '@/lib/api';
 
@@ -7,7 +8,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
   return (
     <Link href={`/yangiliklar/${item.slug}`} className="card group flex flex-col overflow-hidden transition hover:-translate-y-0.5">
       <div className="aspect-[16/10] overflow-hidden bg-brand-50">
-        {img && /* eslint-disable-next-line @next/next/no-img-element */ <img src={img} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />}
+        {img && <Image src={img} alt={item.title} loading="lazy" width={640} height={400} sizes="(max-width: 1024px) 100vw, 33vw" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />}
       </div>
       <div className="flex flex-1 flex-col gap-2.5 p-5">
         <div className="flex items-center gap-2 text-xs font-bold">

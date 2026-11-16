@@ -62,9 +62,9 @@ export default async function Footer() {
         <div>
           <h3 className="mb-4 text-sm font-extrabold">Aloqa</h3>
           <ul className="space-y-3 text-sm text-slate-500">
-            <li className="flex gap-2.5"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />{school?.address || 'Surxondaryo viloyati, Muzrabot tumani'}</li>
-            {school?.phone && <li className="flex gap-2.5"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />{school.phone}</li>}
-            {school?.email && <li className="flex gap-2.5"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />{school.email}</li>}
+            <li className="flex gap-2.5"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />{school?.latitude && school?.longitude ? <a href={`https://www.google.com/maps/search/?api=1&query=${school.latitude},${school.longitude}`} target="_blank" rel="noreferrer">{school.address || 'Surxondaryo viloyati, Muzrabot tumani'}</a> : school?.address || 'Surxondaryo viloyati, Muzrabot tumani'}</li>
+            {school?.phone && <li className="flex gap-2.5"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /><a href={`tel:${school.phone.replace(/[^+\d]/g, '')}`}>{school.phone}</a></li>}
+            {school?.email && <li className="flex gap-2.5"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /><a href={`mailto:${school.email}`}>{school.email}</a></li>}
           </ul>
         </div>
       </div>

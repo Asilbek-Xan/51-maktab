@@ -1,8 +1,17 @@
+import type { Metadata } from 'next';
 import { Building2, Mail, MapPin, Phone, Clock } from 'lucide-react';
 import PageBanner from '@/components/PageBanner';
 import { safeGet, SchoolProfile } from '@/lib/api';
+import JsonLd from '@/components/JsonLd';
+import { absoluteSiteUrl, SITE_URL } from '@/lib/site';
 
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: 'Maktab haqida',
+  description: 'Muzrabot tumani 51-sonli maktabining tarixi, faoliyati va aloqa ma’lumotlari.',
+  ...(SITE_URL ? { alternates: { canonical: absoluteSiteUrl('/biz-haqimizda') }, openGraph: { title: 'Maktab haqida | 51-sonli maktab', description: 'Maktab tarixi, faoliyati va ma’lumotlari.', url: absoluteSiteUrl('/biz-haqimizda'), type: 'website' as const, siteName: '51-sonli maktab', locale: 'uz_UZ', images: [absoluteSiteUrl('/og-image.png')!] }, twitter: { card: 'summary_large_image' as const, title: 'Maktab haqida | 51-sonli maktab', description: 'Maktab tarixi, faoliyati va ma’lumotlari.', images: [absoluteSiteUrl('/og-image.svg')!] } } : {}),
+};
 
 export default async function AboutPage() {
   const school = await safeGet<SchoolProfile>('/school/');
@@ -16,6 +25,7 @@ export default async function AboutPage() {
 
   return (
     <div>
+      {absoluteSiteUrl('/biz-haqimizda') && <JsonLd data={{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [ { "@type": "ListItem", position: 1, name: 'Bosh sahifa', item: absoluteSiteUrl('/') }, { "@type": "ListItem", position: 2, name: 'Maktab haqida', item: absoluteSiteUrl('/biz-haqimizda') } ] }} />}
       <PageBanner crumb="Maktab haqida" title="Maktab haqida" text={school?.tagline || school?.name} />
       <div className="mx-auto max-w-7xl space-y-14 px-4 py-14 sm:px-6">
         {!school ? (
