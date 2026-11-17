@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: { default: siteTitle, template: "%s | 51-sonli maktab" },
   description: siteDescription,
   alternates: { ...(absoluteSiteUrl() ? { canonical: absoluteSiteUrl() } : {}) },
-  verification: { yandex: "a3c37a21a3aa3989" },
+  verification: { yandex: "a3c37a21a3aa3989"},
   openGraph: {
     type: "website",
     locale: "uz_UZ",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     description: siteDescription,
     ...(SITE_URL ? { images: ['/og-image.png'] } : {}),
   },
-  twitter: { card: "summary_large_image", title: siteTitle, description: siteDescription, ...(SITE_URL ? { images: ['/og-image.png'] } : {}) },
+  twitter: { card: "summary_large_image", title: siteTitle, description: siteDescription, ...(SITE_URL ? { images: ['/og-image.svg'] } : {}) },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
