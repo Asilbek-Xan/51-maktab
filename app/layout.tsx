@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: { default: siteTitle, template: "%s | 51-sonli maktab" },
   description: siteDescription,
   alternates: { ...(absoluteSiteUrl() ? { canonical: absoluteSiteUrl() } : {}) },
-  verification: { yandex: "a3c37a21a3aa3989"}
+  verification: { yandex: "a3c37a21a3aa3989"},
   openGraph: {
     type: "website",
     locale: "uz_UZ",
