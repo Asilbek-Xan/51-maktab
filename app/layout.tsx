@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     ...(SITE_URL ? { images: ['/og-image.png'] } : {}),
   },
   twitter: { card: "summary_large_image", title: siteTitle, description: siteDescription, ...(SITE_URL ? { images: ['/og-image.svg'] } : {}) },
+
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
