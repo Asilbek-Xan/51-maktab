@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { MapPin, Phone, Mail, Send, Instagram, Facebook, Youtube } from 'lucide-react';
 import { safeGet, SchoolProfile } from '@/lib/api';
 import SchoolLogo from './SchoolLogo';
+import { schoolGeo } from '@/lib/site';
 
 const sections = [
   { name: 'Maktab haqida', href: '/biz-haqimizda' },
@@ -62,7 +63,7 @@ export default async function Footer() {
         <div>
           <h3 className="mb-4 text-sm font-extrabold">Aloqa</h3>
           <ul className="space-y-3 text-sm text-slate-500">
-            <li className="flex gap-2.5"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />{school?.latitude && school?.longitude ? <a href={`https://www.google.com/maps/search/?api=1&query=${school.latitude},${school.longitude}`} target="_blank" rel="noreferrer">{school.address || 'Surxondaryo viloyati, Muzrabot tumani'}</a> : school?.address || 'Surxondaryo viloyati, Muzrabot tumani'}</li>
+            <li className="flex gap-2.5"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /><a href={schoolGeo(school).linkUrl} target="_blank" rel="noreferrer">{school?.address || 'Surxondaryo viloyati, Muzrabot tumani'}</a></li>
             {school?.phone && <li className="flex gap-2.5"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /><a href={`tel:${school.phone.replace(/[^+\d]/g, '')}`}>{school.phone}</a></li>}
             {school?.email && <li className="flex gap-2.5"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /><a href={`mailto:${school.email}`}>{school.email}</a></li>}
           </ul>

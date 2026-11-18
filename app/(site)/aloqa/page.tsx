@@ -4,14 +4,15 @@ import PageBanner from '@/components/PageBanner';
 import ContactForm from '@/components/ContactForm';
 import { safeGet, SchoolProfile } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
-import { absoluteSiteUrl, SITE_URL } from '@/lib/site';
+import SchoolMap from '@/components/SchoolMap';
+import { absoluteSiteUrl, schoolGeo, SITE_URL } from '@/lib/site';
 
 export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'Aloqa',
   description: '51-sonli maktabning manzili va aloqa ma’lumotlari. Maktab ma’muriyatiga murojaat yuboring.',
-  ...(SITE_URL ? { alternates: { canonical: absoluteSiteUrl('/aloqa') }, openGraph: { title: 'Aloqa | 51-sonli maktab', description: 'Maktab manzili, aloqa ma’lumotlari va murojaat formasi.', url: absoluteSiteUrl('/aloqa'), type: 'website' as const, siteName: '51-sonli maktab', locale: 'uz_UZ', images: [absoluteSiteUrl('/og-image.png')!] }, twitter: { card: 'summary_large_image' as const, title: 'Aloqa | 51-sonli maktab', description: 'Maktab manzili va aloqa ma’lumotlari.', images: [absoluteSiteUrl('/og-image.svg')!] } } : {}),
+  ...(SITE_URL ? { alternates: { canonical: absoluteSiteUrl('/aloqa') }, openGraph: { title: 'Aloqa | 51-sonli maktab', description: 'Maktab manzili, aloqa ma’lumotlari va murojaat formasi.', url: absoluteSiteUrl('/aloqa'), type: 'website' as const, siteName: '51-sonli maktab', locale: 'uz_UZ', images: [absoluteSiteUrl('/og-image.png')!] }, twitter: { card: 'summary_large_image' as const, title: 'Aloqa | 51-sonli maktab', description: 'Maktab manzili va aloqa ma’lumotlari.', images: [absoluteSiteUrl('/og-image.png')!] } } : {}),
 };
 
 export default async function ContactPage() {
@@ -22,7 +23,7 @@ export default async function ContactPage() {
     { label: 'Elektron pochta', value: school?.email, Icon: Mail },
     { label: 'Qabul vaqti', value: school?.working_hours, Icon: Clock },
   ].filter((i) => i.value);
-  const hasMap = school?.latitude && school?.longitude;
+  const geo = schoolGeo(school);
 
   return (
     <div>
@@ -35,16 +36,13 @@ export default async function ContactPage() {
               <div key={label} className="card p-5">
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"><Icon className="h-5 w-5" /></div>
                 <p className="text-xs font-bold text-slate-400">{label}</p>
-                <p className="mt-1 font-bold leading-snug">{label === 'Telefon' ? <a href={`tel:${value?.replace(/[^+\d]/g, '')}`}>{value}</a> : label === 'Elektron pochta' ? <a href={`mailto:${value}`}>{value}</a> : label === 'Manzil' && school?.latitude && school?.longitude ? <a href={`https://www.google.com/maps/search/?api=1&query=${school.latitude},${school.longitude}`} target="_blank" rel="noreferrer">{value}</a> : value}</p>
+                <p className="mt-1 font-bold leading-snug">{label === 'Telefon' ? <a href={`tel:${value?.replace(/[^+\d]/g, '')}`}>{value}</a> : label === 'Elektron pochta' ? <a href={`mailto:${value}`}>{value}</a> : label === 'Manzil' ? <a href={geo.linkUrl} target="_blank" rel="noreferrer">{value}</a> : value}</p>
               </div>
             ))}
           </div>
         )}
-        {hasMap && (
-          <div className="card overflow-hidden">
-            <iframe title="Xarita" loading="lazy" className="h-80 w-full border-0" src={`https://maps.google.com/maps?q=${school!.latitude},${school!.longitude}&z=15&output=embed`} />
-          </div>
-        )}
+        <SchoolMap school={school} />
+
         <div>
           <div className="mx-auto mb-8 max-w-2xl text-center">
             <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Direktorga murojaat</h2>

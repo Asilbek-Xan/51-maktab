@@ -10,7 +10,7 @@ export const revalidate = 60;
 export const metadata: Metadata = {
   title: 'Yangiliklar va e’lonlar',
   description: 'Muzrabot tumani 51-sonli maktabining yangiliklari, yutuqlari va rasmiy e’lonlari.',
-  ...(SITE_URL ? { alternates: { canonical: absoluteSiteUrl('/yangiliklar') }, openGraph: { title: 'Yangiliklar va e’lonlar | 51-sonli maktab', description: 'Maktab hayotidagi voqealar, yutuqlar va rasmiy e’lonlar.', url: absoluteSiteUrl('/yangiliklar'), type: 'website' as const, siteName: '51-sonli maktab', locale: 'uz_UZ', images: [absoluteSiteUrl('/og-image.png')!] }, twitter: { card: 'summary_large_image' as const, title: 'Yangiliklar va e’lonlar | 51-sonli maktab', description: 'Maktab hayotidagi voqealar, yutuqlar va rasmiy e’lonlar.', images: [absoluteSiteUrl('/og-image.svg')!] } } : {}),
+  ...(SITE_URL ? { alternates: { canonical: absoluteSiteUrl('/yangiliklar') }, openGraph: { title: 'Yangiliklar va e’lonlar | 51-sonli maktab', description: 'Maktab hayotidagi voqealar, yutuqlar va rasmiy e’lonlar.', url: absoluteSiteUrl('/yangiliklar'), type: 'website' as const, siteName: '51-sonli maktab', locale: 'uz_UZ', images: [absoluteSiteUrl('/og-image.png')!] }, twitter: { card: 'summary_large_image' as const, title: 'Yangiliklar va e’lonlar | 51-sonli maktab', description: 'Maktab hayotidagi voqealar, yutuqlar va rasmiy e’lonlar.', images: [absoluteSiteUrl('/og-image.png')!] } } : {}),
 };
 
 export default async function NewsPage({ searchParams }: { searchParams: { page?: string } }) {

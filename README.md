@@ -7,6 +7,12 @@ npm run dev        # http://localhost:3000
 ```
 `.env.local`: `NEXT_PUBLIC_API_URL` (asosiy API) va `PANEL_API_PREFIX` (admin panel API).
 
+**SEO uchun majburiy:** `NEXT_PUBLIC_SITE_URL=https://sayt-domeni.uz` (Vercel'da `VERCEL_PROJECT_PRODUCTION_URL` avtomatik).
+Bu bo'lmasa sitemap bo'sh qaytadi, canonical, JSON-LD va OG rasmlar chiqmaydi.
+
+**Xarita:** admin paneldagi maktab ma'lumotiga `latitude`/`longitude` kiritilsa — xarita aniq nuqtani ko'rsatadi.
+Aks holda `lib/site.ts` dagi `SCHOOL_LOCATION` (manzil bo'yicha qidiruv) ishlatiladi.
+
 ## Nima o'zgardi
 - Dizayn referens saytdagi uslubda (yorqin ko'k hero, yumaloq kartalar, light tema).
 - Navbar/footer'dagi "51" belgisi olib tashlandi — logotip `GET /api/v1/school/` dagi `logo` maydonidan olinadi.

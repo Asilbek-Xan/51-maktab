@@ -3,6 +3,7 @@ import { Building2, Mail, MapPin, Phone, Clock } from 'lucide-react';
 import PageBanner from '@/components/PageBanner';
 import { safeGet, SchoolProfile } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
+import SchoolMap from '@/components/SchoolMap';
 import { absoluteSiteUrl, SITE_URL } from '@/lib/site';
 
 export const revalidate = 60;
@@ -10,7 +11,7 @@ export const revalidate = 60;
 export const metadata: Metadata = {
   title: 'Maktab haqida',
   description: 'Muzrabot tumani 51-sonli maktabining tarixi, faoliyati va aloqa ma’lumotlari.',
-  ...(SITE_URL ? { alternates: { canonical: absoluteSiteUrl('/biz-haqimizda') }, openGraph: { title: 'Maktab haqida | 51-sonli maktab', description: 'Maktab tarixi, faoliyati va ma’lumotlari.', url: absoluteSiteUrl('/biz-haqimizda'), type: 'website' as const, siteName: '51-sonli maktab', locale: 'uz_UZ', images: [absoluteSiteUrl('/og-image.png')!] }, twitter: { card: 'summary_large_image' as const, title: 'Maktab haqida | 51-sonli maktab', description: 'Maktab tarixi, faoliyati va ma’lumotlari.', images: [absoluteSiteUrl('/og-image.svg')!] } } : {}),
+  ...(SITE_URL ? { alternates: { canonical: absoluteSiteUrl('/biz-haqimizda') }, openGraph: { title: 'Maktab haqida | 51-sonli maktab', description: 'Maktab tarixi, faoliyati va ma’lumotlari.', url: absoluteSiteUrl('/biz-haqimizda'), type: 'website' as const, siteName: '51-sonli maktab', locale: 'uz_UZ', images: [absoluteSiteUrl('/og-image.png')!] }, twitter: { card: 'summary_large_image' as const, title: 'Maktab haqida | 51-sonli maktab', description: 'Maktab tarixi, faoliyati va ma’lumotlari.', images: [absoluteSiteUrl('/og-image.png')!] } } : {}),
 };
 
 export default async function AboutPage() {
@@ -53,6 +54,7 @@ export default async function AboutPage() {
             )}
           </>
         )}
+        <SchoolMap school={school} title="Maktab xaritada" />
       </div>
     </div>
   );

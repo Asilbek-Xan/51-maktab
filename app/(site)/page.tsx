@@ -6,9 +6,22 @@ import NewsCard from '@/components/NewsCard';
 import ContactForm from '@/components/ContactForm';
 import { safeGet, HomeData, mediaUrl, dateLabel } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
-import { absoluteSiteUrl } from '@/lib/site';
+import { absoluteSiteUrl, SITE_URL, SITE_NAME, OG_IMAGE } from '@/lib/site';
+import type { Metadata } from 'next';
 
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+  ...(SITE_URL ? {
+    alternates: { canonical: absoluteSiteUrl('/') },
+    openGraph: {
+      type: 'website', locale: 'uz_UZ', siteName: SITE_NAME, url: absoluteSiteUrl('/'),
+      title: '51-sonli maktab | Muzrabot tumani, Surxondaryo viloyati',
+      description: "Surxondaryo viloyati Muzrabot tumani 51-sonli umumiy o'rta ta'lim maktabining rasmiy axborot portali.",
+      images: [{ url: OG_IMAGE, width: 1200, height: 630 }],
+    },
+  } : {}),
+};
 
 const directions = [
   { icon: BookOpen, title: 'Chuqurlashtirilgan fanlar', text: 'Aniq fanlar va ona tilidan qo‘shimcha mashg‘ulotlar, olimpiadalarga tayyorgarlik.' },
