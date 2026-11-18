@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Check, Loader2 } from 'lucide-react';
 import type { Resource, Field } from '@/lib/panel';
 import { mediaUrl } from '@/lib/api';
@@ -52,6 +52,20 @@ function cell(row: Row, c: Resource['columns'][number]) {
   return <span className="line-clamp-2">{s}</span>;
 }
 
+/**
+ * Django modelidagi "saytda ko'rsatish" belgisi (nomi loyihaga qarab farq qiladi).
+ * Panel API qaytargan yozuvlardan avtomatik aniqlanadi va formaga qo'shiladi.
+ */
+const VISIBILITY_KEYS = ['is_published', 'is_active', 'is_visible', 'is_public', 'published', 'active', 'visible', 'show_on_site'];
+const tracksSite = (resource: Resource) => !resource.singleton && !resource.readOnly;
+
+function hiddenReason(row: Row, visKeys: string[]): string {
+  const off = visKeys.find((k) => row[k] === false);
+  if (off) return 'Saytda ko‘rsatish o‘chirilgan';
+  if (row.published_at && new Date(row.published_at) > new Date()) return `E’lon vaqti: ${new Date(row.published_at).toLocaleString('uz-UZ')}`;
+  return 'Backend saytga bermayapti';
+}
+
 export default function ResourceManager({ resource }: { resource: Resource }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [single, setSingle] = useState<Row | null>(null);
@@ -59,18 +73,44 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<Row | 'new' | null>(null);
   const [toast, setToast] = useState('');
+  const [publicIds, setPublicIds] = useState<Set<number> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const r = await fetch(api(`${resource.endpoint}/${resource.singleton ? '' : '?page_size=200'}`), { cache: 'no-store' });
+      const [r, pub] = await Promise.all([
+        fetch(api(`${resource.endpoint}/${resource.singleton ? '' : '?page_size=200'}`), { cache: 'no-store' }),
+        tracksSite(resource) ? fetch(`/api/panel-public-ids/${resource.endpoint}`, { cache: 'no-store' }).then((x) => x.json()).catch(() => null) : null,
+      ]);
       if (r.status === 401) { window.location.href = '/admin/login'; return; }
       if (!r.ok) throw new Error(`Server javobi: HTTP ${r.status}`);
       const d = await r.json();
       if (resource.singleton) setSingle(d); else setRows(Array.isArray(d) ? d : d.results ?? []);
+      setPublicIds(Array.isArray(pub?.ids) ? new Set(pub.ids) : null);
     } catch (e) { setError(e instanceof Error ? e.message : 'Yuklab bo‘lmadi'); }
     setLoading(false);
   }, [resource]);
+
+  // Panel API qaytargan, lekin formada yo'q "ko'rsatish" belgilarini topamiz
+  const visKeys = useMemo(() => {
+    if (!tracksSite(resource)) return [];
+    const names = new Set(resource.fields.map((f) => f.name));
+    return VISIBILITY_KEYS.filter((k) => !names.has(k) && rows.some((row) => typeof row[k] === 'boolean'));
+  }, [rows, resource]);
+  const formResource = useMemo<Resource>(() => ({
+    ...resource,
+    fields: [...resource.fields, ...visKeys.map((k) => ({ name: k, label: 'Saytda ko‘rsatish', type: 'checkbox' as const, hint: `Backend maydoni: ${k}` }))],
+  }), [resource, visKeys]);
+  const hiddenCount = publicIds ? rows.filter((row) => !publicIds.has(row.id)).length : 0;
+
+  async function publish(row: Row) {
+    const key = visKeys.find((k) => row[k] === false);
+    if (!key) return;
+    const fd = new FormData(); fd.append(key, 'true');
+    const r = await fetch(api(`${resource.endpoint}/${row.id}/`), { method: 'PATCH', body: fd });
+    if (r.ok) { flash('Saytga chiqarildi'); load(); }
+    else { const d = await r.json().catch(() => ({})); flash(`Bo‘lmadi: ${errorText(d, resource) || `HTTP ${r.status}`}`); }
+  }
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -110,6 +150,12 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
       </div>
 
       {error && <p className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</p>}
+      {!loading && hiddenCount > 0 && (
+        <p className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+          {hiddenCount} ta yozuv saytda ko‘rinmayapti.{' '}
+          {visKeys.length ? 'Ularni “Saytga chiqarish” tugmasi bilan yoki tahrirlashda “Saytda ko‘rsatish” belgisini yoqib chiqaring.' : 'Backend ularni ommaviy API’ga bermayapti — Django’dagi filtrni tekshirish kerak.'}
+        </p>
+      )}
       {loading ? (
         <div className="flex justify-center p-16 text-slate-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : resource.singleton ? (
@@ -118,13 +164,23 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
         <div className="overflow-x-auto rounded-3xl bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead><tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-              {resource.columns.map((c) => <th key={c.name} className="px-5 py-3.5 font-bold">{c.label}</th>)}<th className="w-28 px-5 py-3.5" />
+              {resource.columns.map((c) => <th key={c.name} className="px-5 py-3.5 font-bold">{c.label}</th>)}{publicIds && <th className="px-5 py-3.5 font-bold">Saytda</th>}<th className="w-28 px-5 py-3.5" />
             </tr></thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={resource.columns.length + 1} className="p-10 text-center text-slate-400">Hozircha yozuv yo‘q</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={resource.columns.length + 2} className="p-10 text-center text-slate-400">Hozircha yozuv yo‘q</td></tr>}
               {rows.map((row) => (
                 <tr key={row.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                   {resource.columns.map((c) => <td key={c.name} className="max-w-xs px-5 py-3">{cell(row, c)}</td>)}
+                  {publicIds && <td className="px-5 py-3">
+                    {publicIds.has(row.id)
+                      ? <Check className="h-4 w-4 text-emerald-600" aria-label="Saytda ko‘rinadi" />
+                      : <div className="space-y-1">
+                          <span className="inline-block whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800" title={hiddenReason(row, visKeys)}>Ko‘rinmaydi</span>
+                          {visKeys.some((k) => row[k] === false)
+                            ? <button onClick={() => publish(row)} className="block whitespace-nowrap text-xs font-bold text-brand-700 hover:underline">Saytga chiqarish</button>
+                            : <span className="block max-w-[10rem] text-xs text-slate-400">{hiddenReason(row, visKeys)}</span>}
+                        </div>}
+                  </td>}
                   <td className="px-5 py-3"><div className="flex justify-end gap-1">
                     <button onClick={() => openEdit(row)} disabled={opening === row.id} aria-label="Ochish" className="rounded-lg p-2 text-slate-500 hover:bg-brand-50 hover:text-brand-700">{opening === row.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}</button>
                     <button onClick={() => remove(row)} aria-label="O‘chirish" className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
@@ -143,7 +199,7 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
               <h2 className="text-xl font-extrabold">{editing === 'new' ? `Yangi ${resource.single}` : resource.readOnly ? 'Murojaat' : `Tahrirlash`}</h2>
               <button onClick={() => setEditing(null)} aria-label="Yopish" className="rounded-full p-2 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </div>
-            <RecordForm resource={resource} initial={editing === 'new' ? null : editing} onSaved={() => { setEditing(null); flash('Saqlandi'); load(); }} />
+            <RecordForm resource={formResource} initial={editing === 'new' ? null : editing} onSaved={() => { setEditing(null); flash('Saqlandi'); load(); }} />
           </div>
         </div>
       )}
@@ -153,7 +209,7 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
 }
 
 function RecordForm({ resource, initial, inline, onSaved }: { resource: Resource; initial: Row | null; inline?: boolean; onSaved: (d: Row) => void }) {
-  const [values, setValues] = useState<Row>(() => Object.fromEntries(resource.fields.map((f) => [f.name, initial?.[f.name] ?? (f.type === 'checkbox' ? false : '')])));
+  const [values, setValues] = useState<Row>(() => Object.fromEntries(resource.fields.map((f) => [f.name, initial?.[f.name] ?? (f.type === 'checkbox' ? VISIBILITY_KEYS.includes(f.name) : '')])));
   const [files, setFiles] = useState<Record<string, File>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
