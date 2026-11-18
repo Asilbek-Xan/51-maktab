@@ -8,6 +8,16 @@ import { mediaUrl } from '@/lib/api';
 type Row = Record<string, any>;
 const api = (path: string) => `/api/panel/${path}`;
 
+/** DRF xatosini o'qiladigan matnga aylantiradi: {"title": ["..."]} → "Sarlavha: ..." */
+function errorText(d: unknown, resource: Resource): string {
+  if (!d || typeof d !== 'object') return '';
+  return Object.entries(d as Record<string, unknown>).map(([k, v]) => {
+    const label = k === 'detail' || k === 'error' || k === 'non_field_errors' ? '' : (resource.fields.find((f) => f.name === k)?.label ?? k);
+    const text = Array.isArray(v) ? v.join(', ') : typeof v === 'object' ? JSON.stringify(v) : String(v);
+    return label ? `${label}: ${text}` : text;
+  }).join(' · ');
+}
+
 function cell(row: Row, c: Resource['columns'][number]) {
   const v = row[c.name];
   if (c.kind === 'image') { const u = mediaUrl(row.thumbnail || v); return u ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={u} alt="" loading="lazy" className="h-10 w-10 rounded-xl object-cover" /> : <span className="block h-10 w-10 rounded-xl bg-slate-100" />; }
@@ -43,12 +53,28 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
     window.addEventListener('panel:new-messages', load);
     return () => window.removeEventListener('panel:new-messages', load);
   }, [resource.key, load]);
-  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2500); };
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3500); };
+
+  // Ro'yxatda ba'zi maydonlar bo'lmasligi mumkin — tahrirlashdan oldin to'liq yozuvni olamiz.
+  const [opening, setOpening] = useState<number | null>(null);
+  async function openEdit(row: Row) {
+    setOpening(row.id);
+    try {
+      const r = await fetch(api(`${resource.endpoint}/${row.id}/`), { cache: 'no-store' });
+      if (r.status === 401) { window.location.href = '/admin/login'; return; }
+      setEditing(r.ok ? { ...row, ...(await r.json()) } : row);
+    } catch { setEditing(row); }
+    setOpening(null);
+  }
 
   async function remove(row: Row) {
     if (!confirm(`“${row[resource.titleField] ?? row.id}” o‘chirilsinmi?`)) return;
-    const r = await fetch(api(`${resource.endpoint}/${row.id}/`), { method: 'DELETE' });
-    if (r.ok || r.status === 204) { setRows((p) => p.filter((x) => x.id !== row.id)); flash('O‘chirildi'); } else flash('O‘chirib bo‘lmadi');
+    try {
+      const r = await fetch(api(`${resource.endpoint}/${row.id}/`), { method: 'DELETE' });
+      if (r.status === 401) { window.location.href = '/admin/login'; return; }
+      if (r.ok || r.status === 204) { setRows((p) => p.filter((x) => x.id !== row.id)); flash('O‘chirildi'); load(); }
+      else { const d = await r.json().catch(() => ({})); flash(`O‘chirib bo‘lmadi: ${errorText(d, resource) || `HTTP ${r.status}`}`); }
+    } catch { flash('Serverga ulanib bo‘lmadi'); }
   }
 
   return (
@@ -75,7 +101,7 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
                 <tr key={row.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                   {resource.columns.map((c) => <td key={c.name} className="max-w-xs px-5 py-3">{cell(row, c)}</td>)}
                   <td className="px-5 py-3"><div className="flex justify-end gap-1">
-                    <button onClick={() => setEditing(row)} aria-label="Ochish" className="rounded-lg p-2 text-slate-500 hover:bg-brand-50 hover:text-brand-700"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => openEdit(row)} disabled={opening === row.id} aria-label="Ochish" className="rounded-lg p-2 text-slate-500 hover:bg-brand-50 hover:text-brand-700">{opening === row.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}</button>
                     <button onClick={() => remove(row)} aria-label="O‘chirish" className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                   </div></td>
                 </tr>
@@ -110,19 +136,24 @@ function RecordForm({ resource, initial, inline, onSaved }: { resource: Resource
 
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError('');
+    const isNew = !initial?.id && !resource.singleton;
     const fd = new FormData();
     resource.fields.forEach((f) => {
       if (f.type === 'image') { if (files[f.name]) fd.append(f.name, files[f.name]); return; }
       const v = values[f.name];
+      const empty = v === '' || v == null;
+      const hadValue = initial?.[f.name] !== '' && initial?.[f.name] != null;
       if (f.type === 'checkbox') fd.append(f.name, v ? 'true' : 'false');
-      else if (v !== '' && v != null) fd.append(f.name, String(v));
+      else if (!empty) fd.append(f.name, String(v).trim());
+      // Tahrirlashda maydon tozalansa — bo'sh qiymat yuboramiz, aks holda eski matn qolib ketardi.
+      else if (!isNew && hadValue) fd.append(f.name, '');
     });
-    const isNew = !initial?.id && !resource.singleton;
     const url = resource.singleton ? `${resource.endpoint}/` : isNew ? `${resource.endpoint}/` : `${resource.endpoint}/${initial!.id}/`;
     try {
       const r = await fetch(api(url), { method: isNew ? 'POST' : 'PATCH', body: fd });
+      if (r.status === 401) { window.location.href = '/admin/login'; return; }
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { setError(Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ') || `Xatolik (HTTP ${r.status})`); setBusy(false); return; }
+      if (!r.ok) { setError(errorText(d, resource) || `Xatolik (HTTP ${r.status})`); setBusy(false); return; }
       onSaved(d);
     } catch { setError('Serverga ulanib bo‘lmadi'); }
     setBusy(false);
@@ -145,7 +176,28 @@ function FieldInput({ f, value, current, file, disabled, onChange, onFile, wide 
   const wrap = (child: React.ReactNode) => <label className={`block ${wide ? 'sm:col-span-2' : ''}`}>{label}{child}{f.hint && <span className="mt-1 block text-xs text-slate-400">{f.hint}</span>}</label>;
   if (f.type === 'checkbox') return <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={!!value} disabled={disabled} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 rounded accent-brand-600" /> {f.label}</label>;
   if (f.type === 'textarea') return wrap(<textarea rows={4} value={value ?? ''} disabled={disabled} required={f.required} onChange={(e) => onChange(e.target.value)} className="field resize-y" />);
-  if (f.type === 'select') return wrap(<select value={value ?? ''} disabled={disabled} onChange={(e) => onChange(e.target.value)} className="field">{f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>);
+  if (f.type === 'select') {
+    // Backend'dan ro'yxatda yo'q eski qiymat kelsa ham yo'qolib ketmasin
+    const known = !value || f.options?.some((o) => o.value === value);
+    return wrap(<select value={value ?? ''} disabled={disabled} required={f.required} onChange={(e) => onChange(e.target.value)} className="field">
+      <option value="" disabled={f.required}>— Tanlang —</option>
+      {!known && <option value={value}>{String(value)}</option>}
+      {f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>);
+  }
+  if (f.type === 'number') {
+    // Faqat raqam: harf, minus, nuqta, "e" kiritilmaydi
+    return wrap(<input type="text" inputMode="numeric" pattern="\d*" value={value ?? ''} disabled={disabled} required={f.required}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+        if (!digits) return onChange('');
+        const n = Number(digits);
+        onChange(String(f.max != null ? Math.min(n, f.max) : n));
+      }}
+      onBlur={() => { if (value !== '' && value != null && f.min != null && Number(value) < f.min) onChange(String(f.min)); }}
+      placeholder={f.min != null && f.max != null ? `${f.min}–${f.max}` : undefined}
+      className="field" />);
+  }
   if (f.type === 'image') {
     const preview = file ? URL.createObjectURL(file) : mediaUrl(current);
     return wrap(<div className="flex items-center gap-4">

@@ -8,8 +8,7 @@ const PANEL_PREFIX = (process.env.PANEL_API_PREFIX || `${API_V1_PREFIX}/panel`).
 
 async function count(endpoint: string, token: string): Promise<number | null> {
   try {
-    const prefix = endpoint === 'messages' ? PANEL_PREFIX : API_V1_PREFIX;
-    const r = await fetch(`${API_BASE_URL}${prefix}/${endpoint}/?page_size=1`, { headers: { Authorization: `Token ${token}` }, cache: 'no-store' });
+    const r = await fetch(`${API_BASE_URL}${PANEL_PREFIX}/${endpoint}/?page_size=1`, { headers: { Authorization: `Token ${token}` }, cache: 'no-store' });
     if (!r.ok) return null;
     const d = await r.json();
     return Array.isArray(d) ? d.length : (d.count ?? null);

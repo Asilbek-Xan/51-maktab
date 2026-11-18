@@ -4,6 +4,7 @@ export interface Field {
   name: string; label: string; type: FieldType;
   options?: { value: string; label: string }[];
   required?: boolean; hint?: string;
+  min?: number; max?: number; // number uchun
 }
 export interface Resource {
   key: string; title: string; single: string; endpoint: string;
@@ -20,7 +21,7 @@ export const RESOURCES: Resource[] = [
     columns: [{ name: 'image', label: 'Rasm', kind: 'image' }, { name: 'title', label: 'Sarlavha' }, { name: 'kind_label', label: 'Turi' }, { name: 'is_pinned', label: 'Muhim', kind: 'bool' }, { name: 'published_at', label: 'Sana', kind: 'date' }],
     fields: [
       { name: 'title', label: 'Sarlavha', type: 'text', required: true },
-      { name: 'kind', label: 'Turi', type: 'select', options: [{ value: 'yangilik', label: 'Yangilik' }, { value: 'elon', label: 'E’lon' }] },
+      { name: 'kind', label: 'Turi', type: 'select', required: true, options: [{ value: 'yangilik', label: 'Yangilik' }, { value: 'elon', label: 'E’lon' }] },
       { name: 'summary', label: 'Qisqa mazmuni', type: 'textarea' },
       { name: 'content', label: 'To‘liq matn', type: 'textarea' },
       { name: 'image', label: 'Rasm', type: 'image' },
@@ -34,8 +35,13 @@ export const RESOURCES: Resource[] = [
       { name: 'full_name', label: 'F.I.Sh.', type: 'text', required: true },
       { name: 'position', label: 'Lavozimi', type: 'text' },
       { name: 'subject', label: 'Fani', type: 'text' },
-      { name: 'category', label: 'Toifa (kod)', type: 'text', hint: 'Backenddagi toifa kodi bilan bir xil yozing' },
-      { name: 'experience_years', label: 'Tajriba (yil)', type: 'number' },
+      { name: 'category', label: 'Toifa', type: 'select', required: true, hint: '“Rahbariyat” sahifasida xodimlar shu toifa bo‘yicha guruhlanadi', options: [
+        { value: 'oliy', label: 'Oliy toifa' },
+        { value: 'birinchi', label: 'Birinchi toifa' },
+        { value: 'ikkinchi', label: 'Ikkinchi toifa' },
+        { value: 'mutaxassis', label: 'Mutaxassis' },
+      ] },
+      { name: 'experience_years', label: 'Tajriba (yil)', type: 'number', min: 0, max: 70 },
       { name: 'photo', label: 'Rasm', type: 'image' },
       { name: 'bio', label: 'Qisqacha ma’lumot', type: 'textarea' },
     ],
@@ -47,8 +53,14 @@ export const RESOURCES: Resource[] = [
       { name: 'title', label: 'Yutuq nomi', type: 'text', required: true },
       { name: 'student_name', label: 'O‘quvchi', type: 'text' },
       { name: 'grade', label: 'Sinf', type: 'text' },
-      { name: 'level', label: 'Daraja (kod)', type: 'text' },
-      { name: 'place', label: 'O‘rin', type: 'number' },
+      { name: 'level', label: 'Daraja', type: 'select', required: true, options: [
+        { value: 'maktab', label: 'Maktab' },
+        { value: 'tuman', label: 'Tuman' },
+        { value: 'viloyat', label: 'Viloyat' },
+        { value: 'respublika', label: 'Respublika' },
+        { value: 'xalqaro', label: 'Xalqaro' },
+      ] },
+      { name: 'place', label: 'O‘rin', type: 'number', min: 1, max: 100 },
       { name: 'date', label: 'Sana', type: 'date' },
       { name: 'image', label: 'Rasm', type: 'image' },
       { name: 'description', label: 'Izoh', type: 'textarea' },

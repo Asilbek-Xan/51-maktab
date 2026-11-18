@@ -29,10 +29,17 @@ export async function apiGet<T>(path: string, revalidate: number = REVALIDATE): 
   }
 }
 
-/** Kesh faqat muvaffaqiyatli javoblarni saqlaydi; xatoda avvalgi muvaffaqiyatli javob qaytariladi. */
+/** Admin panelda o'zgarish bo'lganda chaqiriladi — eski ma'lumot ko'rsatilmasin. */
+export function clearApiMemoryCache() {
+  successfulResponses.clear();
+}
+
+/**
+ * Asosiy kesh — Next data cache (revalidate + 'api' tegi, panel o'zgarishida tozalanadi).
+ * Xotiradagi nusxa faqat zaxira: API xato bersa, oxirgi muvaffaqiyatli javob qaytariladi.
+ */
 export async function safeGet<T>(path: string, revalidate: number = REVALIDATE): Promise<T | null> {
   const cached = successfulResponses.get(path);
-  if (cached && cached.expiresAt > Date.now()) return cached.value as T;
   try {
     let request = pendingResponses.get(path) as Promise<T> | undefined;
     if (!request) {
