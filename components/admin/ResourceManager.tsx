@@ -48,7 +48,7 @@ function cell(row: Row, c: Resource['columns'][number]) {
   if (c.kind === 'image') { const u = mediaUrl(row.thumbnail || v); return u ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={u} alt="" loading="lazy" className="h-10 w-10 rounded-xl object-cover" /> : <span className="block h-10 w-10 rounded-xl bg-slate-100" />; }
   if (c.kind === 'bool') return v ? <Check className="h-4 w-4 text-emerald-600" /> : <span className="text-slate-300">—</span>;
   if (c.kind === 'date') return v ? new Date(v).toLocaleDateString('uz-UZ') : '—';
-  const s = v == null || v === '' ? '—' : String(v);
+  const s = v == null || v === '' ? '—' : typeof v === 'object' ? String(v.full_name ?? v.name ?? v.title ?? v.id) : String(v);
   return <span className="line-clamp-2">{s}</span>;
 }
 
@@ -209,11 +209,27 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
 }
 
 function RecordForm({ resource, initial, inline, onSaved }: { resource: Resource; initial: Row | null; inline?: boolean; onSaved: (d: Row) => void }) {
-  const [values, setValues] = useState<Row>(() => Object.fromEntries(resource.fields.map((f) => [f.name, initial?.[f.name] ?? (f.type === 'checkbox' ? VISIBILITY_KEYS.includes(f.name) : '')])));
+  // Bog'langan yozuv {id, full_name} ko'rinishida keladi — formada faqat id saqlanadi
+  const norm = (v: any) => (v && typeof v === 'object' && 'id' in v ? String(v.id) : typeof v === 'number' ? String(v) : v);
+  const [values, setValues] = useState<Row>(() => Object.fromEntries(resource.fields.map((f) => [f.name, norm(initial?.[f.name]) ?? (f.type === 'checkbox' ? VISIBILITY_KEYS.includes(f.name) : '')])));
   const [files, setFiles] = useState<Record<string, File>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (n: string, v: any) => setValues((p) => ({ ...p, [n]: v }));
+
+  // relation maydonlari uchun variantlarni yuklash (masalan, ustozlar)
+  const [relOptions, setRelOptions] = useState<Record<string, { value: string; label: string }[]>>({});
+  useEffect(() => {
+    resource.fields.filter((f) => f.relation).forEach(async (f) => {
+      try {
+        const r = await fetch(api(`${f.relation!.endpoint}/?page_size=200`), { cache: 'no-store' });
+        const d = await r.json();
+        const list: Row[] = Array.isArray(d) ? d : d.results ?? [];
+        setRelOptions((p) => ({ ...p, [f.name]: list.map((x) => ({ value: String(x.id), label: String(x[f.relation!.labelField] ?? x.id) })) }));
+      } catch { /* ro'yxat yuklanmasa — select bo'sh qoladi */ }
+    });
+  }, [resource]);
+  const withOptions = (f: Field): Field => (f.relation ? { ...f, options: relOptions[f.name] ?? [] } : f);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError('');
@@ -247,7 +263,7 @@ function RecordForm({ resource, initial, inline, onSaved }: { resource: Resource
   return (
     <form onSubmit={submit} className={`space-y-4 ${inline ? 'rounded-3xl bg-white p-6 shadow-sm sm:p-8' : ''}`}>
       <div className={inline ? 'grid gap-4 sm:grid-cols-2' : 'space-y-4'}>
-        {resource.fields.map((f) => <FieldInput key={f.name} f={f} value={values[f.name]} current={initial?.[f.name]} file={files[f.name]} disabled={ro} onChange={(v) => set(f.name, v)} onFile={async (file) => { const small = await shrinkImage(file); setFiles((p) => ({ ...p, [f.name]: small })); }} wide={inline && (f.type === 'textarea')} />)}
+        {resource.fields.map((f) => <FieldInput key={f.name} f={withOptions(f)} value={values[f.name]} current={initial?.[f.name]} file={files[f.name]} disabled={ro} onChange={(v) => set(f.name, v)} onFile={async (file) => { const small = await shrinkImage(file); setFiles((p) => ({ ...p, [f.name]: small })); }} wide={inline && (f.type === 'textarea')} />)}
       </div>
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
       {!ro && <button disabled={busy} className="btn-primary rounded-xl disabled:opacity-60">{busy ? 'Saqlanmoqda…' : 'Saqlash'}</button>}

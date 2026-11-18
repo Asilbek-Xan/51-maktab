@@ -5,7 +5,13 @@ export interface Field {
   options?: { value: string; label: string }[];
   required?: boolean; hint?: string;
   min?: number; max?: number; // number uchun
+  /** select variantlari boshqa bo'limdan olinadi (masalan, ustozlar ro'yxati) */
+  relation?: { endpoint: string; labelField: string };
 }
+
+/** Sinflar: 1-A … 11-G */
+const GRADE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 1).flatMap((n) =>
+  ['A', 'B', 'V', 'G', 'D'].map((l) => ({ value: `${n}-${l}`, label: `${n}-${l} sinf` })));
 export interface Resource {
   key: string; title: string; single: string; endpoint: string;
   columns: { name: string; label: string; kind?: 'image' | 'bool' | 'date' }[];
@@ -48,11 +54,12 @@ export const RESOURCES: Resource[] = [
   },
   {
     key: 'achievements', title: 'Yutuqlar', single: 'yutuq', endpoint: 'achievements', titleField: 'title',
-    columns: [{ name: 'image', label: 'Rasm', kind: 'image' }, { name: 'title', label: 'Yutuq' }, { name: 'student_name', label: 'O‘quvchi' }, { name: 'level_label', label: 'Daraja' }, { name: 'place', label: 'O‘rin' }],
+    columns: [{ name: 'image', label: 'Rasm', kind: 'image' }, { name: 'title', label: 'Yutuq' }, { name: 'student_name', label: 'O‘quvchi' }, { name: 'grade', label: 'Sinf' }, { name: 'level_label', label: 'Daraja' }, { name: 'place', label: 'O‘rin' }, { name: 'date', label: 'Sana', kind: 'date' }],
     fields: [
       { name: 'title', label: 'Yutuq nomi', type: 'text', required: true },
-      { name: 'student_name', label: 'O‘quvchi', type: 'text' },
-      { name: 'grade', label: 'Sinf', type: 'text' },
+      { name: 'student_name', label: 'O‘quvchi', type: 'text', required: true },
+      { name: 'grade', label: 'Sinf', type: 'select', options: GRADE_OPTIONS },
+      { name: 'teacher', label: 'Ustoz (rahbar)', type: 'select', relation: { endpoint: 'teachers', labelField: 'full_name' }, hint: 'Ro‘yxat “Xodimlar” bo‘limidan olinadi' },
       { name: 'level', label: 'Daraja', type: 'select', required: true, options: [
         { value: 'maktab', label: 'Maktab' },
         { value: 'tuman', label: 'Tuman' },
@@ -61,8 +68,8 @@ export const RESOURCES: Resource[] = [
         { value: 'xalqaro', label: 'Xalqaro' },
       ] },
       { name: 'place', label: 'O‘rin', type: 'number', min: 1, max: 100 },
-      { name: 'date', label: 'Sana', type: 'date' },
-      { name: 'image', label: 'Rasm', type: 'image' },
+      { name: 'date', label: 'Sana', type: 'date', required: true },
+      { name: 'image', label: 'Rasm', type: 'image', hint: 'Saytdagi “Yutuqlar” sahifasida kartochka rasmi bo‘ladi' },
       { name: 'description', label: 'Izoh', type: 'textarea' },
     ],
   },

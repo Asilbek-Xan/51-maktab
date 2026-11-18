@@ -147,16 +147,19 @@ export default async function HomePage() {
           <h2 className="mb-8 text-center text-3xl font-extrabold tracking-tight sm:text-4xl">O‘quvchilar yutuqlari</h2>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {achievements.slice(0, 6).map((a) => (
-              <div key={a.id} className="card flex gap-4 p-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-600"><Medal className="h-6 w-6" /></div>
-                <div>
+              <Link key={a.id} href="/yutuqlar" className="card group flex gap-4 p-4 transition hover:-translate-y-0.5">
+                {mediaUrl(a.image)
+                  ? <Image src={mediaUrl(a.image)!} alt={`${a.student_name} — ${a.title}`} loading="lazy" width={80} height={80} sizes="80px" className="h-20 w-20 shrink-0 rounded-2xl object-cover" />
+                  : <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-600"><Medal className="h-7 w-7" /></div>}
+                <div className="min-w-0">
                   <p className="text-xs font-bold text-brand-700">{a.level_label}{a.place ? ` · ${a.place}-o‘rin` : ''}</p>
-                  <h3 className="mt-1 font-extrabold leading-snug">{a.title}</h3>
+                  <h3 className="mt-1 line-clamp-2 font-extrabold leading-snug">{a.title}</h3>
                   <p className="mt-1 text-sm text-slate-500">{a.student_name}{a.grade ? ` · ${a.grade}` : ''}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
+          <div className="mt-8 text-center"><Link href="/yutuqlar" className="btn-primary">Barcha yutuqlar <ArrowRight className="h-4 w-4" /></Link></div>
         </section>
       )}
 

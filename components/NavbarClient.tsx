@@ -8,6 +8,7 @@ import { Menu, X, Phone } from 'lucide-react';
 const navLinks = [
   { name: 'Maktab haqida', href: '/biz-haqimizda' },
   { name: 'Rahbariyat', href: '/rahbariyat' },
+  { name: 'Yutuqlar', href: '/yutuqlar' },
   { name: 'Yangiliklar', href: '/yangiliklar' },
   { name: 'Aloqa', href: '/aloqa' },
 ];
@@ -29,7 +30,7 @@ export default function NavbarClient({ phone, logo, name, subtitle }: { phone: s
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex">
+        <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
           <Link href="/" className={`border-b-2 py-1 text-[15px] font-semibold transition ${pathname === '/' ? 'border-brand-600 text-brand-700' : 'border-transparent text-ink hover:text-brand-600'}`}>Bosh sahifa</Link>
           {navLinks.map((item) => (
             <Link key={item.href} href={item.href} className={`border-b-2 py-1 text-[15px] font-semibold transition ${isActive(item.href) ? 'border-brand-600 text-brand-700' : 'border-transparent text-ink hover:text-brand-600'}`}>

@@ -80,6 +80,7 @@ export interface BannerItem { id: number; title: string; subtitle: string; image
 export interface AchievementItem {
   id: number; title: string; student_name: string; grade: string; level: string; level_label: string;
   place: number | null; date: string; description: string; image: string | null;
+  teacher: { id: number; full_name: string } | null;
 }
 export interface EventItem {
   id: number; title: string; slug: string; event_date: string; excerpt: string;

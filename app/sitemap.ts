@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { safeGet, type NewsItem, type Paginated } from "@/lib/api";
 import { SITE_URL } from "@/lib/site";
-const staticRoutes = ["", "/biz-haqimizda", "/rahbariyat", "/yangiliklar", "/aloqa"];
+const staticRoutes = ["", "/biz-haqimizda", "/rahbariyat", "/yutuqlar", "/yangiliklar", "/aloqa"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!SITE_URL) return [];

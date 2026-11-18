@@ -7,6 +7,7 @@ import { schoolGeo } from '@/lib/site';
 const sections = [
   { name: 'Maktab haqida', href: '/biz-haqimizda' },
   { name: 'Rahbariyat va jamoa', href: '/rahbariyat' },
+  { name: 'O‘quvchilar yutuqlari', href: '/yutuqlar' },
   { name: 'Yangiliklar', href: '/yangiliklar' },
   { name: 'Aloqa', href: '/aloqa' },
 ];
