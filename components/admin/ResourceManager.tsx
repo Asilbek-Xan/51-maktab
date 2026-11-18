@@ -8,6 +8,31 @@ import { mediaUrl } from '@/lib/api';
 type Row = Record<string, any>;
 const api = (path: string) => `/api/panel/${path}`;
 
+/**
+ * Vercel bitta so'rovda 4.5 MB dan ko'p qabul qilmaydi (localhost'da bunday cheklov yo'q).
+ * Shuning uchun katta rasmni brauzerning o'zida kichraytiramiz: eng uzun tomoni 1920px, JPEG 85%.
+ */
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+async function shrinkImage(file: File): Promise<File> {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+  const keepPng = file.type === 'image/png';
+  if (file.size <= (keepPng ? 2 : 1.5) * 1024 * 1024) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d')!;
+    if (!keepPng) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const type = keepPng ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, type, 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    const name = keepPng ? file.name : file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], name, { type });
+  } catch { return file; }
+}
+
 /** DRF xatosini o'qiladigan matnga aylantiradi: {"title": ["..."]} → "Sarlavha: ..." */
 function errorText(d: unknown, resource: Resource): string {
   if (!d || typeof d !== 'object') return '';
@@ -149,9 +174,12 @@ function RecordForm({ resource, initial, inline, onSaved }: { resource: Resource
       else if (!isNew && hadValue) fd.append(f.name, '');
     });
     const url = resource.singleton ? `${resource.endpoint}/` : isNew ? `${resource.endpoint}/` : `${resource.endpoint}/${initial!.id}/`;
+    const totalSize = Object.values(files).reduce((s, f) => s + f.size, 0);
+    if (totalSize > MAX_UPLOAD_BYTES) { setError(`Rasm juda katta (${(totalSize / 1024 / 1024).toFixed(1)} MB). 4 MB gacha rasm tanlang.`); setBusy(false); return; }
     try {
       const r = await fetch(api(url), { method: isNew ? 'POST' : 'PATCH', body: fd });
       if (r.status === 401) { window.location.href = '/admin/login'; return; }
+      if (r.status === 413) { setError('Rasm juda katta — kichikroq rasm tanlang.'); setBusy(false); return; }
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setError(errorText(d, resource) || `Xatolik (HTTP ${r.status})`); setBusy(false); return; }
       onSaved(d);
@@ -163,7 +191,7 @@ function RecordForm({ resource, initial, inline, onSaved }: { resource: Resource
   return (
     <form onSubmit={submit} className={`space-y-4 ${inline ? 'rounded-3xl bg-white p-6 shadow-sm sm:p-8' : ''}`}>
       <div className={inline ? 'grid gap-4 sm:grid-cols-2' : 'space-y-4'}>
-        {resource.fields.map((f) => <FieldInput key={f.name} f={f} value={values[f.name]} current={initial?.[f.name]} file={files[f.name]} disabled={ro} onChange={(v) => set(f.name, v)} onFile={(file) => setFiles((p) => ({ ...p, [f.name]: file }))} wide={inline && (f.type === 'textarea')} />)}
+        {resource.fields.map((f) => <FieldInput key={f.name} f={f} value={values[f.name]} current={initial?.[f.name]} file={files[f.name]} disabled={ro} onChange={(v) => set(f.name, v)} onFile={async (file) => { const small = await shrinkImage(file); setFiles((p) => ({ ...p, [f.name]: small })); }} wide={inline && (f.type === 'textarea')} />)}
       </div>
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
       {!ro && <button disabled={busy} className="btn-primary rounded-xl disabled:opacity-60">{busy ? 'Saqlanmoqda…' : 'Saqlash'}</button>}
