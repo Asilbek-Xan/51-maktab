@@ -38,6 +38,11 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
   }, [resource]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (resource.key !== 'messages') return;
+    window.addEventListener('panel:new-messages', load);
+    return () => window.removeEventListener('panel:new-messages', load);
+  }, [resource.key, load]);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2500); };
 
   async function remove(row: Row) {

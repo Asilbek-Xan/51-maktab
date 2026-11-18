@@ -10,6 +10,9 @@ npm run dev        # http://localhost:3000
 **SEO uchun majburiy:** `NEXT_PUBLIC_SITE_URL=https://sayt-domeni.uz` (Vercel'da `VERCEL_PROJECT_PRODUCTION_URL` avtomatik).
 Bu bo'lmasa sitemap bo'sh qaytadi, canonical, JSON-LD va OG rasmlar chiqmaydi.
 
+**Murojaat → Telegram:** `TELEGRAM_BOT_TOKEN` (@BotFather'dan) va `TELEGRAM_CHAT_ID` (xabar boradigan chat/guruh ID)
+o'rnatilsa, har bir yangi murojaat Telegram'ga yuboriladi. Ular bo'lmasa murojaat faqat admin panelga tushadi.
+
 **Xarita:** admin paneldagi maktab ma'lumotiga `latitude`/`longitude` kiritilsa — xarita aniq nuqtani ko'rsatadi.
 Aks holda `lib/site.ts` dagi `SCHOOL_LOCATION` (manzil bo'yicha qidiruv) ishlatiladi.
 
