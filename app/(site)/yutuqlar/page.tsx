@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Medal, Trophy, Globe2, GraduationCap, CalendarDays } from 'lucide-react';
 import PageBanner from '@/components/PageBanner';
 import JsonLd from '@/components/JsonLd';
+import AchievementModal from '@/components/AchievementModal';
 import { safeGet, mediaUrl, dateLabel, AchievementItem, Paginated } from '@/lib/api';
 import { absoluteSiteUrl, SITE_URL, OG_IMAGE } from '@/lib/site';
 
@@ -120,12 +121,11 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
                         <h2 className="text-lg font-extrabold leading-snug">{a.title}</h2>
                         <p className="font-bold text-ink">{a.student_name}{a.grade ? <span className="font-medium text-slate-500"> · {a.grade} sinf</span> : null}</p>
                         {a.teacher?.full_name && <p className="flex items-center gap-1.5 text-sm text-slate-500"><GraduationCap className="h-4 w-4 shrink-0 text-brand-600" /> Ustoz: {a.teacher.full_name}</p>}
-                        {a.description && (
-                          <details className="group text-sm leading-relaxed text-slate-600">
-                            <summary className="cursor-pointer list-none font-bold text-brand-700 group-open:mb-1.5 [&::-webkit-details-marker]:hidden">Batafsil <span className="group-open:hidden">↓</span><span className="hidden group-open:inline">↑</span></summary>
-                            {a.description}
-                          </details>
-                        )}
+                        {a.description && <p className="line-clamp-2 text-sm leading-relaxed text-slate-600">{a.description}</p>}
+                        <AchievementModal placeClass={placeStyle(a.place)} data={{
+                          title: a.title, student_name: a.student_name, grade: a.grade, teacher: a.teacher?.full_name,
+                          level_label: a.level_label, place: a.place, date: a.date ? dateLabel(a.date) : null, image: img, description: a.description,
+                        }} />
                         {a.date && <p className="mt-auto flex items-center gap-1.5 pt-2 text-sm text-slate-400"><CalendarDays className="h-4 w-4" /> {dateLabel(a.date)}</p>}
                       </div>
                     </article>
