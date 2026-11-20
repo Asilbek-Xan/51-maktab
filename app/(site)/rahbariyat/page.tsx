@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import { Quote, UserRound } from 'lucide-react';
 import PageBanner from '@/components/PageBanner';
-import { safeGet, mediaUrl, Paginated, SchoolProfile, TeacherItem } from '@/lib/api';
+import { safeGet, mediaUrl, teacherPhotoUrl, Paginated, SchoolProfile, TeacherItem } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
 import EmptyState from '@/components/EmptyState';
 import { absoluteSiteUrl, SITE_URL } from '@/lib/site';
@@ -33,7 +33,7 @@ function leaderRank(position?: string | null) {
 const NO_SUBJECT = new Set(['dars bermaydi', 'boshqaruv']);
 
 function PersonCard({ t, lead }: { t: TeacherItem; lead?: boolean }) {
-  const photo = mediaUrl(t.photo);
+  const photo = teacherPhotoUrl(t.photo);
   const subject = t.subject && !NO_SUBJECT.has(norm(t.subject)) ? t.subject : '';
   const size = lead ? 'h-[72px] w-[72px]' : 'h-14 w-14';
   const main = t.position || subject;

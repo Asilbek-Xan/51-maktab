@@ -4,6 +4,12 @@ export const API_V1_PREFIX = '/api/v1';
 /** Sahifalar necha soniya keshda turadi (PythonAnywhere sekin bo'lgani uchun har so'rovda urilmaymiz). */
 export const REVALIDATE = 60;
 
+/** Bazadagi namunaviy (demo_*) xodim rasmlari ko'rsatilmaydi — o'rniga ism bosh harflari chiqadi */
+export function teacherPhotoUrl(src: string | null | undefined): string | null {
+  if (!src || /\/demo_[^/]*$/i.test(src)) return null;
+  return mediaUrl(src);
+}
+
 /** Backend nisbiy yo'l ("/media/logo.png") qaytarsa ham ishlaydi. */
 export function mediaUrl(src: string | null | undefined): string | null {
   if (!src) return null;
