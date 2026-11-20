@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Medal, Trophy, Globe2, GraduationCap, CalendarDays } from 'lucide-react';
+import { Medal, Trophy, Globe2, GraduationCap, CalendarDays, Search } from 'lucide-react';
 import PageBanner from '@/components/PageBanner';
 import JsonLd from '@/components/JsonLd';
 import AchievementModal from '@/components/AchievementModal';
 import { safeGet, mediaUrl, dateLabel, AchievementItem, Paginated } from '@/lib/api';
+import EmptyState from '@/components/EmptyState';
 import { absoluteSiteUrl, SITE_URL, OG_IMAGE } from '@/lib/site';
 
 export const revalidate = 60;
@@ -52,11 +53,35 @@ async function getAll(): Promise<AchievementItem[] | null> {
   return items;
 }
 
-export default async function AchievementsPage({ searchParams }: { searchParams: { daraja?: string } }) {
+/** "9a", "9 A", "9-a sinf" → "9-A" */
+function normGrade(s: string) {
+  const m = s.trim().toUpperCase().replace(/SINF/g, '').trim().match(/^(\d{1,2})\s*-?\s*([A-ZА-Я])?$/);
+  return m ? { num: m[1], letter: m[2] ?? '' } : null;
+}
+
+/** API'ning `search` parametri ism va sarlavha bo'yicha qidiradi; sinf va ustoz bo'yicha moslikni qo'shib qo'yamiz */
+async function searchIds(q: string, all: AchievementItem[]): Promise<Set<number>> {
+  const ids = new Set<number>();
+  const res = await safeGet<Paginated<AchievementItem> | AchievementItem[]>(`/achievements/?search=${encodeURIComponent(q)}&page_size=100`);
+  (Array.isArray(res) ? res : res?.results ?? []).forEach((a) => ids.add(a.id));
+  const g = normGrade(q);
+  const low = q.toLowerCase();
+  for (const a of all) {
+    const [num, letter] = (a.grade || '').toUpperCase().split('-');
+    if (g && num === g.num && (!g.letter || letter === g.letter)) ids.add(a.id);
+    if (a.teacher?.full_name?.toLowerCase().includes(low)) ids.add(a.id);
+  }
+  return ids;
+}
+
+export default async function AchievementsPage({ searchParams }: { searchParams: { daraja?: string; q?: string } }) {
   const all = await getAll();
   const active = LEVELS.some((l) => l.value === searchParams.daraja) ? searchParams.daraja! : '';
+  const q = (searchParams.q || '').trim().slice(0, 80);
+  const found = q && all ? await searchIds(q, all) : null;
   const sorted = [...(all ?? [])].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (LEVEL_RANK[a.level] ?? 9) - (LEVEL_RANK[b.level] ?? 9));
-  const list = active ? sorted.filter((a) => a.level === active) : sorted;
+  const list = sorted.filter((a) => (!active || a.level === active) && (!found || found.has(a.id)));
+  const withQ = (href: string) => (q ? `${href}${href.includes('?') ? '&' : '?'}q=${encodeURIComponent(q)}` : href);
   const counts = Object.fromEntries(LEVELS.map((l) => [l.value, (all ?? []).filter((a) => a.level === l.value).length]));
   const stats = [
     { label: 'Jami yutuqlar', value: all?.length ?? 0, Icon: Trophy },
@@ -79,9 +104,9 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
 
       <div className="mx-auto max-w-7xl space-y-10 px-4 py-14 sm:px-6">
         {!all ? (
-          <p className="card p-8 text-center text-slate-500">Ma’lumotlarni yuklab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.</p>
+          <EmptyState kind="error" />
         ) : all.length === 0 ? (
-          <p className="card p-8 text-center text-slate-500">Hozircha yutuqlar kiritilmagan.</p>
+          <EmptyState icon={Trophy} title="Yutuqlar yo‘q" text="Hozircha o‘quvchilar yutuqlari kiritilmagan." />
         ) : (
           <>
             {/* Statistika */}
@@ -94,16 +119,32 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
               ))}
             </div>
 
+            {/* Qidiruv */}
+            <form action="/yutuqlar" method="get" role="search" className="flex gap-2">
+              {active && <input type="hidden" name="daraja" value={active} />}
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <input type="search" name="q" defaultValue={q} maxLength={80} placeholder="O‘quvchi ismi, sinf (masalan 9-A) yoki ustoz…" aria-label="Yutuqlardan qidirish" className="field w-full pl-12" />
+              </div>
+              <button type="submit" className="btn-primary shrink-0">Qidirish</button>
+            </form>
+            {q && (
+              <p className="-mt-6 text-sm text-slate-500">
+                “<span className="font-bold text-ink">{q}</span>” bo‘yicha {list.length} ta natija ·{' '}
+                <Link href={active ? `/yutuqlar?daraja=${active}` : '/yutuqlar'} scroll={false} className="font-bold text-brand-700 hover:underline">Tozalash</Link>
+              </p>
+            )}
+
             {/* Daraja bo'yicha filtr */}
             <nav aria-label="Daraja bo‘yicha saralash" className="flex flex-wrap gap-2">
-              <Link href="/yutuqlar" scroll={false} className={`rounded-full px-4 py-2 text-sm font-bold transition ${!active ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 shadow-sm hover:text-brand-700'}`}>Barchasi <span className="opacity-70">{all.length}</span></Link>
+              <Link href={withQ('/yutuqlar')} scroll={false} className={`rounded-full px-4 py-2 text-sm font-bold transition ${!active ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 shadow-sm hover:text-brand-700'}`}>Barchasi <span className="opacity-70">{all.length}</span></Link>
               {LEVELS.filter((l) => counts[l.value]).map((l) => (
-                <Link key={l.value} href={`/yutuqlar?daraja=${l.value}`} scroll={false} className={`rounded-full px-4 py-2 text-sm font-bold transition ${active === l.value ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 shadow-sm hover:text-brand-700'}`}>{l.label} <span className="opacity-70">{counts[l.value]}</span></Link>
+                <Link key={l.value} href={withQ(`/yutuqlar?daraja=${l.value}`)} scroll={false} className={`rounded-full px-4 py-2 text-sm font-bold transition ${active === l.value ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 shadow-sm hover:text-brand-700'}`}>{l.label} <span className="opacity-70">{counts[l.value]}</span></Link>
               ))}
             </nav>
 
             {list.length === 0 ? (
-              <p className="card p-8 text-center text-slate-500">Bu daraja bo‘yicha yutuq yo‘q.</p>
+              (q ? <EmptyState kind="search" text="Boshqa ism, sinf (masalan 9-A) yoki ustoz ismini kiriting." /> : <EmptyState icon={Trophy} title="Bu darajada yutuq yo‘q" text="Boshqa darajani tanlang." />)
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {list.map((a) => {

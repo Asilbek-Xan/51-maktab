@@ -74,6 +74,8 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
   const [editing, setEditing] = useState<Row | 'new' | null>(null);
   const [toast, setToast] = useState('');
   const [publicIds, setPublicIds] = useState<Set<number> | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -85,7 +87,13 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
       if (r.status === 401) { window.location.href = '/admin/login'; return; }
       if (!r.ok) throw new Error(`Server javobi: HTTP ${r.status}`);
       const d = await r.json();
-      if (resource.singleton) setSingle(d); else setRows(Array.isArray(d) ? d : d.results ?? []);
+      if (resource.singleton) setSingle(d);
+      else {
+        const list: Row[] = Array.isArray(d) ? d : d.results ?? [];
+        setRows(list);
+        // o'chirilgan yozuvlarni tanlovdan olib tashlaymiz
+        setSelected((p) => new Set(list.filter((x) => p.has(x.id)).map((x) => x.id)));
+      }
       setPublicIds(Array.isArray(pub?.ids) ? new Set(pub.ids) : null);
     } catch (e) { setError(e instanceof Error ? e.message : 'Yuklab bo‘lmadi'); }
     setLoading(false);
@@ -142,6 +150,50 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
     } catch { flash('Serverga ulanib bo‘lmadi'); }
   }
 
+  // ---- Ko'plab tanlash ----
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const someSelected = selected.size > 0 && !allSelected;
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)));
+  const toggleOne = (id: number) => setSelected((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const selectedRows = rows.filter((r) => selected.has(r.id));
+  const publishable = selectedRows.filter((r) => visKeys.some((k) => r[k] === false));
+
+  /** So'rovlarni 4 tadan parallel yuboradi; muvaffaqiyatsizlar sonini qaytaradi */
+  async function runBulk(items: Row[], fn: (row: Row) => Promise<Response>) {
+    let failed = 0;
+    for (let i = 0; i < items.length; i += 4) {
+      const res = await Promise.all(items.slice(i, i + 4).map((row) => fn(row).catch(() => null)));
+      if (res.some((r) => r?.status === 401)) { window.location.href = '/admin/login'; return -1; }
+      failed += res.filter((r) => !r || !(r.ok || r.status === 204)).length;
+    }
+    return failed;
+  }
+
+  async function bulkRemove() {
+    const items = selectedRows;
+    if (!items.length || !confirm(`Tanlangan ${items.length} ta yozuv o‘chirilsinmi? Bu amalni ortga qaytarib bo‘lmaydi.`)) return;
+    setBulkBusy(true);
+    const failed = await runBulk(items, (row) => fetch(api(`${resource.endpoint}/${row.id}/`), { method: 'DELETE' }));
+    setBulkBusy(false);
+    if (failed < 0) return;
+    flash(failed ? `${items.length - failed} ta o‘chirildi, ${failed} tasini o‘chirib bo‘lmadi` : `${items.length} ta yozuv o‘chirildi`);
+    setSelected(new Set()); load();
+  }
+
+  async function bulkPublish() {
+    const items = publishable;
+    if (!items.length) return;
+    setBulkBusy(true);
+    const failed = await runBulk(items, (row) => {
+      const fd = new FormData(); fd.append(visKeys.find((k) => row[k] === false)!, 'true');
+      return fetch(api(`${resource.endpoint}/${row.id}/`), { method: 'PATCH', body: fd });
+    });
+    setBulkBusy(false);
+    if (failed < 0) return;
+    flash(failed ? `${items.length - failed} ta chiqarildi, ${failed} tasida xato` : `${items.length} ta yozuv saytga chiqarildi`);
+    setSelected(new Set()); load();
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -156,6 +208,20 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
           {visKeys.length ? 'Ularni “Saytga chiqarish” tugmasi bilan yoki tahrirlashda “Saytda ko‘rsatish” belgisini yoqib chiqaring.' : 'Backend ularni ommaviy API’ga bermayapti — Django’dagi filtrni tekshirish kerak.'}
         </p>
       )}
+      {!loading && !resource.singleton && selected.size > 0 && (
+        <div className="sticky top-16 z-20 flex flex-wrap items-center gap-3 rounded-2xl bg-ink px-5 py-3 text-sm text-white shadow-lg lg:top-4">
+          <span className="font-bold">{selected.size} ta tanlandi</span>
+          <button onClick={() => setSelected(new Set())} className="text-white/70 hover:text-white hover:underline">Bekor qilish</button>
+          <div className="ml-auto flex flex-wrap gap-2">
+            {publishable.length > 0 && (
+              <button onClick={bulkPublish} disabled={bulkBusy} className="flex items-center gap-1.5 rounded-xl bg-white/15 px-3.5 py-2 font-bold hover:bg-white/25 disabled:opacity-60"><Check className="h-4 w-4" /> Saytga chiqarish ({publishable.length})</button>
+            )}
+            <button onClick={bulkRemove} disabled={bulkBusy} className="flex items-center gap-1.5 rounded-xl bg-red-500 px-3.5 py-2 font-bold hover:bg-red-600 disabled:opacity-60">
+              {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} O‘chirish ({selected.size})
+            </button>
+          </div>
+        </div>
+      )}
       {loading ? (
         <div className="flex justify-center p-16 text-slate-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : resource.singleton ? (
@@ -164,12 +230,16 @@ export default function ResourceManager({ resource }: { resource: Resource }) {
         <div className="overflow-x-auto rounded-3xl bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead><tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+              <th className="w-12 py-3.5 pl-5 pr-1">
+                <input type="checkbox" checked={allSelected} disabled={rows.length === 0} ref={(el) => { if (el) el.indeterminate = someSelected; }} onChange={toggleAll} aria-label="Hammasini belgilash" title="Hammasini belgilash" className="h-4 w-4 cursor-pointer accent-brand-600" />
+              </th>
               {resource.columns.map((c) => <th key={c.name} className="px-5 py-3.5 font-bold">{c.label}</th>)}{publicIds && <th className="px-5 py-3.5 font-bold">Saytda</th>}<th className="w-28 px-5 py-3.5" />
             </tr></thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={resource.columns.length + 2} className="p-10 text-center text-slate-400">Hozircha yozuv yo‘q</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={resource.columns.length + 3} className="p-10 text-center"><p className="font-extrabold text-ink">Ma’lumot yo‘q</p><p className="mt-1 text-sm text-slate-400">{resource.readOnly ? 'Hozircha murojaat kelmagan.' : 'Hozircha yozuv kiritilmagan. “Qo‘shish” tugmasi bilan birinchisini qo‘shing.'}</p></td></tr>}
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
+                <tr key={row.id} className={`border-b border-slate-50 last:border-0 ${selected.has(row.id) ? 'bg-brand-50/60' : 'hover:bg-slate-50/60'}`}>
+                  <td className="py-3 pl-5 pr-1"><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleOne(row.id)} aria-label="Belgilash" className="h-4 w-4 cursor-pointer accent-brand-600" /></td>
                   {resource.columns.map((c) => <td key={c.name} className="max-w-xs px-5 py-3">{cell(row, c)}</td>)}
                   {publicIds && <td className="px-5 py-3">
                     {publicIds.has(row.id)
@@ -280,7 +350,7 @@ function FieldInput({ f, value, current, file, disabled, onChange, onFile, wide 
     // Backend'dan ro'yxatda yo'q eski qiymat kelsa ham yo'qolib ketmasin
     const known = !value || f.options?.some((o) => o.value === value);
     return wrap(<select value={value ?? ''} disabled={disabled} required={f.required} onChange={(e) => onChange(e.target.value)} className="field">
-      <option value="" disabled={f.required}>— Tanlang —</option>
+      <option value="" disabled={f.required}>{f.emptyLabel ?? '— Tanlang —'}</option>
       {!known && <option value={value}>{String(value)}</option>}
       {f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>);

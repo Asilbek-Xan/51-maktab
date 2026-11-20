@@ -55,12 +55,43 @@ async function notifyTelegram({ name, phone, email, message }: ContactInput) {
   }
 }
 
+// ---- Spamdan himoya ----
+const RATE_WINDOW_MS = 10 * 60 * 1000; // 10 daqiqa
+const RATE_MAX = 3;                    // bir IP'dan shu oraliqda ko'pi bilan 3 ta murojaat
+const MIN_FILL_MS = 3000;              // 3 soniyadan tez to'ldirilgan forma — bot
+const hits = new Map<string, number[]>();
+
+function clientIp(request: Request) {
+  return request.headers.get('x-real-ip') || request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+}
+
+/** true — limitdan oshdi. Xotira funksiya nusxasi bo'yicha (Vercel'da qayta ishlatiladi), oddiy botlarga yetarli. */
+function rateLimited(ip: string) {
+  const now = Date.now();
+  const list = (hits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (list.length >= RATE_MAX) { hits.set(ip, list); return true; }
+  list.push(now);
+  hits.set(ip, list);
+  if (hits.size > 5000) hits.forEach((v, k) => { if (!v.some((t) => now - t < RATE_WINDOW_MS)) hits.delete(k); });
+  return false;
+}
+
 export async function POST(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'JSON so‘rovi noto‘g‘ri' }, { status: 400 });
+  }
+
+  const raw = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  // Yashirin maydon to'ldirilgan — bot. Unga "muvaffaqiyat" deymiz, lekin hech qayerga yubormaymiz.
+  if (str(raw.website)) return NextResponse.json({ ok: true }, { status: 201 });
+  if (typeof raw.elapsed === 'number' && raw.elapsed < MIN_FILL_MS) {
+    return NextResponse.json({ error: 'Forma juda tez yuborildi. Bir necha soniyadan so‘ng qayta urinib ko‘ring.' }, { status: 400 });
+  }
+  if (rateLimited(clientIp(request))) {
+    return NextResponse.json({ error: 'Juda ko‘p murojaat yuborildi. 10 daqiqadan so‘ng qayta urinib ko‘ring.' }, { status: 429 });
   }
 
   const checked = validate(body);

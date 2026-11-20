@@ -7,7 +7,32 @@ export interface Field {
   min?: number; max?: number; // number uchun
   /** select variantlari boshqa bo'limdan olinadi (masalan, ustozlar ro'yxati) */
   relation?: { endpoint: string; labelField: string };
+  /** majburiy bo'lmagan select'dagi bo'sh variant matni */
+  emptyLabel?: string;
 }
+
+const opts = (list: string[]) => list.map((v) => ({ value: v, label: v }));
+
+/** Lavozimlar (qiymatlar bazadagi mavjud yozuvlar bilan bir xil) */
+const POSITION_OPTIONS = opts([
+  'Maktab direktori',
+  "Direktor o'rinbosari (o'quv ishlari)",
+  "Direktor o'rinbosari (tarbiya)",
+  "Fan o'qituvchisi",
+  "Boshlang'ich sinf o'qituvchisi",
+  'Maktab psixologi',
+  'Logoped',
+  'Kutubxonachi',
+  'Pedagog-tashkilotchi',
+  "Chaqiriqqacha harbiy ta'lim rahbari",
+]);
+
+const SUBJECT_OPTIONS = opts([
+  'Ona tili va adabiyot', 'Matematika', 'Fizika', 'Kimyo', 'Biologiya', 'Geografiya', 'Astronomiya',
+  'Tarix', 'Huquq asoslari', 'Informatika', 'Ingliz tili', 'Rus tili', 'Nemis tili',
+  "Boshlang'ich ta'lim", 'Texnologiya', 'Chizmachilik', "Tasviriy san'at", 'Musiqa', 'Jismoniy tarbiya',
+  "Chaqiriqqacha harbiy ta'lim", 'Psixologiya', 'Logopediya', 'Kutubxona ishi',
+]);
 
 /** Sinflar: 1-A … 11-G */
 const GRADE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 1).flatMap((n) =>
@@ -39,8 +64,9 @@ export const RESOURCES: Resource[] = [
     columns: [{ name: 'photo', label: 'Rasm', kind: 'image' }, { name: 'full_name', label: 'F.I.Sh.' }, { name: 'position', label: 'Lavozim' }, { name: 'subject', label: 'Fan' }, { name: 'category_label', label: 'Toifa' }],
     fields: [
       { name: 'full_name', label: 'F.I.Sh.', type: 'text', required: true },
-      { name: 'position', label: 'Lavozimi', type: 'text' },
-      { name: 'subject', label: 'Fani', type: 'text' },
+      { name: 'position', label: 'Lavozimi', type: 'select', required: true, options: POSITION_OPTIONS },
+      // Django "fan"ni bo'sh qabul qilmaydi, shuning uchun "Dars bermaydi" alohida qiymat sifatida saqlanadi
+      { name: 'subject', label: 'Fani', type: 'select', required: true, options: [{ value: 'Dars bermaydi', label: 'Dars bermaydi' }, ...SUBJECT_OPTIONS], hint: 'Direktor yoki boshqa xodim dars bermasa, “Dars bermaydi”ni tanlang' },
       { name: 'category', label: 'Toifa', type: 'select', required: true, hint: '“Rahbariyat” sahifasida xodimlar shu toifa bo‘yicha guruhlanadi', options: [
         { value: 'oliy', label: 'Oliy toifa' },
         { value: 'birinchi', label: 'Birinchi toifa' },
@@ -49,7 +75,7 @@ export const RESOURCES: Resource[] = [
       ] },
       { name: 'experience_years', label: 'Tajriba (yil)', type: 'number', min: 0, max: 70 },
       { name: 'photo', label: 'Rasm', type: 'image' },
-      { name: 'bio', label: 'Qisqacha ma’lumot', type: 'textarea' },
+      { name: 'bio', label: 'Qisqacha ma’lumot', type: 'textarea', hint: '“Rahbariyat” sahifasida xodim kartochkasida ko‘rinadi' },
     ],
   },
   {
@@ -101,7 +127,7 @@ export const RESOURCES: Resource[] = [
       { name: 'district', label: 'Tuman / viloyat', type: 'text' },
       { name: 'logo', label: 'Logotip', type: 'image', hint: 'Saytning yuqori chap qismida ko‘rinadi' },
       { name: 'tagline', label: 'Shior', type: 'text' },
-      { name: 'welcome_text', label: 'Bosh sahifa sarlavhasi', type: 'text' },
+      { name: 'welcome_text', label: 'Bosh sahifa sarlavhasi', type: 'text', hint: 'Bosh sahifada maktab nomi ustida kichik qator bo‘lib chiqadi (masalan, “Xush kelibsiz!”)' },
       { name: 'intro_text', label: 'Bosh sahifa qisqa matni', type: 'textarea' },
       { name: 'description', label: 'Maktab haqida', type: 'textarea' },
       { name: 'history', label: 'Tarix', type: 'textarea' },

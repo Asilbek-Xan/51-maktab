@@ -5,6 +5,8 @@ import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 import { safeGet, apiGet, mediaUrl, dateLabel, NewsItem, Paginated } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
+import NewsCard from '@/components/NewsCard';
+import EmptyState from '@/components/EmptyState';
 import { absoluteSiteUrl, SITE_URL } from '@/lib/site';
 
 export const revalidate = 60;
@@ -60,8 +62,13 @@ export default async function NewsDetail({ params }: { params: { slug: string } 
   }
   if (!item) notFound();
   const img = mediaUrl(item.image);
+  const latest = await safeGet<Paginated<NewsItem>>('/news/?page_size=7');
+  const others = (latest?.results ?? []).filter((n) => n.slug !== item!.slug);
+  // Avval shu turdagi (yangilik / e'lon), keyin qolganlari
+  const related = [...others.filter((n) => n.kind === item!.kind), ...others.filter((n) => n.kind !== item!.kind)].slice(0, 3);
 
   return (
+    <>
     <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <Link href="/yangiliklar" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-brand-700"><ArrowLeft className="h-4 w-4" /> Barcha yangiliklar</Link>
       {absoluteSiteUrl(`/yangiliklar/${item.slug}`) && <JsonLd data={[
@@ -75,8 +82,16 @@ export default async function NewsDetail({ params }: { params: { slug: string } 
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{item.title}</h1>
           {item.summary && <p className="text-lg leading-relaxed text-slate-600">{item.summary}</p>}
           {item.content && <div className="whitespace-pre-line leading-relaxed text-slate-700">{item.content}</div>}
+          {!item.summary && !item.content && <EmptyState compact title="Matn yo‘q" text="Bu yangilik uchun batafsil matn kiritilmagan." />}
         </div>
       </div>
     </article>
+    {related.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6">
+        <h2 className="mb-6 text-2xl font-extrabold tracking-tight">Boshqa yangiliklar</h2>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{related.map((n) => <NewsCard key={n.id} item={n} />)}</div>
+      </section>
+    )}
+    </>
   );
 }

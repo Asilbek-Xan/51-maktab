@@ -20,6 +20,11 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE() {
+  // Django'dagi tokenni ham bekor qilamiz (xato bo'lsa ham cookie o'chiriladi)
+  const token = cookies().get(COOKIE)?.value;
+  if (token) {
+    await fetch(`${API_BASE_URL}${PREFIX}/logout/`, { method: 'POST', headers: { Authorization: `Token ${token}` }, cache: 'no-store', signal: AbortSignal.timeout(8000) }).catch(() => null);
+  }
   cookies().delete(COOKIE);
   return NextResponse.json({ ok: true });
 }

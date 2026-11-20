@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { formatUzPhone, uzPhoneDigits, UZ_PHONE_DIGITS } from '@/lib/phone';
 
@@ -9,6 +9,9 @@ const empty = { name: '', phone: '', email: '', message: '' };
 export default function ContactForm({ id }: { id?: string }) {
   // phone — faqat +998 dan keyingi 9 ta raqam (masalan "901234567")
   const [form, setForm] = useState(empty);
+  // Spamdan himoya: botlar to'ldiradigan yashirin maydon va forma ochilgan vaqt
+  const [website, setWebsite] = useState('');
+  const startedAt = useRef(Date.now());
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value });
@@ -23,10 +26,10 @@ export default function ContactForm({ id }: { id?: string }) {
     }
     setStatus('loading'); setError('');
     try {
-      const payload = { ...form, phone: `+998 ${formatUzPhone(form.phone)}` };
+      const payload = { ...form, phone: `+998 ${formatUzPhone(form.phone)}`, website, elapsed: Date.now() - startedAt.current };
       const res = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json().catch(() => null);
-      if (res.ok) { setStatus('success'); setForm(empty); }
+      if (res.ok) { setStatus('success'); setForm(empty); startedAt.current = Date.now(); }
       else { setError(data?.error ? (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)) : `Xatolik (HTTP ${res.status})`); setStatus('error'); }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Server bilan aloqa uzildi'); setStatus('error');
@@ -34,7 +37,11 @@ export default function ContactForm({ id }: { id?: string }) {
   }
 
   return (
-    <form id={id} onSubmit={submit} className="card mx-auto w-full max-w-2xl space-y-4 p-6 sm:p-8">
+    <form id={id} onSubmit={submit} className="card relative mx-auto w-full max-w-2xl space-y-4 p-6 sm:p-8">
+      {/* Odamlarga ko'rinmaydi; bot to'ldirsa murojaat jim tashlab yuboriladi */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+        <label>Veb-sayt<input tabIndex={-1} autoComplete="off" name="website" value={website} onChange={(e) => setWebsite(e.target.value)} /></label>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-bold">Ism-familiya
           <input required maxLength={120} value={form.name} onChange={set('name')} placeholder="Ismingiz" className="field mt-1.5 font-normal" />

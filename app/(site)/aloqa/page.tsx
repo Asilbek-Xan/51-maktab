@@ -5,6 +5,7 @@ import ContactForm from '@/components/ContactForm';
 import { safeGet, SchoolProfile } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
 import SchoolMap from '@/components/SchoolMap';
+import EmptyState from '@/components/EmptyState';
 import { absoluteSiteUrl, schoolGeo, SITE_URL } from '@/lib/site';
 
 export const revalidate = 60;
@@ -30,6 +31,8 @@ export default async function ContactPage() {
       {absoluteSiteUrl('/aloqa') && <JsonLd data={{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [ { "@type": "ListItem", position: 1, name: 'Bosh sahifa', item: absoluteSiteUrl('/') }, { "@type": "ListItem", position: 2, name: 'Aloqa', item: absoluteSiteUrl('/aloqa') } ] }} />}
       <PageBanner crumb="Aloqa" title="Aloqa" text="Keling, qo‘ng‘iroq qiling yoki yozing — doim aloqadamiz." />
       <div className="mx-auto max-w-7xl space-y-12 px-4 py-14 sm:px-6">
+        {!school && <EmptyState kind="error" />}
+        {school && info.length === 0 && <EmptyState icon={Phone} title="Aloqa ma’lumotlari yo‘q" text="Telefon va manzil hozircha kiritilmagan. Quyidagi forma orqali murojaat qilishingiz mumkin." />}
         {info.length > 0 && (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {info.map(({ label, value, Icon }) => (

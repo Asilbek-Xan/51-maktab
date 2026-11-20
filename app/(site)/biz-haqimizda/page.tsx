@@ -4,6 +4,7 @@ import PageBanner from '@/components/PageBanner';
 import { safeGet, SchoolProfile } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
 import SchoolMap from '@/components/SchoolMap';
+import EmptyState from '@/components/EmptyState';
 import { absoluteSiteUrl, SITE_URL } from '@/lib/site';
 
 export const revalidate = 60;
@@ -30,9 +31,12 @@ export default async function AboutPage() {
       <PageBanner crumb="Maktab haqida" title="Maktab haqida" text={school?.tagline || school?.name} />
       <div className="mx-auto max-w-7xl space-y-14 px-4 py-14 sm:px-6">
         {!school ? (
-          <p className="card p-8 text-center text-slate-500">Ma’lumotlarni yuklab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.</p>
+          <EmptyState kind="error" />
         ) : (
           <>
+            {!school.history && !school.description && facts.length === 0 && (
+              <EmptyState icon={Building2} title="Ma’lumot yo‘q" text="Maktab haqida ma’lumot hozircha kiritilmagan." />
+            )}
             {(school.history || school.description) && (
               <section className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
                 <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{school.history ? 'Maktab tarixi' : school.name}</h2>

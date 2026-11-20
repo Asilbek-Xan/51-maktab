@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, Newspaper, Users, Trophy, Image as ImageIcon, MessageSquare, School, LogOut, ExternalLink, Menu, X, Bell } from 'lucide-react';
+import { LayoutDashboard, Newspaper, Users, Trophy, Image as ImageIcon, MessageSquare, School, KeyRound, LogOut, ExternalLink, Menu, X, Bell } from 'lucide-react';
 import { useNewMessages } from './useNewMessages';
 
 const items = [
@@ -14,6 +14,7 @@ const items = [
   { href: '/admin/achievements', label: 'Yutuqlar', Icon: Trophy },
   { href: '/admin/banners', label: 'Bannerlar', Icon: ImageIcon },
   { href: '/admin/school', label: 'Maktab ma’lumoti', Icon: School },
+  { href: '/admin/account', label: 'Hisob (parol)', Icon: KeyRound },
 ];
 
 export default function Sidebar() {

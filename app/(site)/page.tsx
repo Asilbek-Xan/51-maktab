@@ -2,11 +2,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, BookOpen, Laptop2, Palette, Trophy, UserRound, Medal } from 'lucide-react';
 import Marquee from '@/components/Marquee';
+import HeroSlider, { type HeroSlide } from '@/components/HeroSlider';
 import NewsCard from '@/components/NewsCard';
 import ContactForm from '@/components/ContactForm';
 import { safeGet, HomeData, mediaUrl, dateLabel } from '@/lib/api';
 import JsonLd from '@/components/JsonLd';
 import { absoluteSiteUrl, SITE_URL, SITE_NAME, OG_IMAGE } from '@/lib/site';
+import EmptyState from '@/components/EmptyState';
 import type { Metadata } from 'next';
 
 export const revalidate = 60;
@@ -33,11 +35,17 @@ const directions = [
 export default async function HomePage() {
   const data = await safeGet<HomeData>('/home/');
   const school = data?.school;
-  const banner = data?.banners?.[0];
   const news = data?.news ?? [];
   const achievements = data?.achievements ?? [];
-  const intro = banner?.subtitle || school?.intro_text || school?.description || '';
-  const heroImg = mediaUrl(banner?.image);
+  const fallbackText = school?.intro_text || school?.description || '';
+  const banners = data?.banners ?? [];
+  const slides: HeroSlide[] = (banners.length ? banners : [null]).map((b) => ({
+    title: b?.title || undefined,
+    text: b?.subtitle || fallbackText,
+    image: mediaUrl(b?.image),
+    href: b?.link_url || '/aloqa',
+    button: b?.button_text || 'Murojaat yuborish',
+  }));
   const [first, ...rest] = news;
 
   return (
@@ -45,31 +53,7 @@ export default async function HomePage() {
       {absoluteSiteUrl('/') && <JsonLd data={{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: 'Bosh sahifa', item: absoluteSiteUrl('/') }] }} />}
       {/* Hero */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-        <section className="banner-blue banner-arc relative overflow-hidden rounded-4xl text-white">
-          <div className="relative z-10 grid items-center gap-8 px-6 py-12 sm:px-12 lg:grid-cols-[1.1fr_0.9fr] lg:py-0">
-            <div className="hero-seq space-y-6 lg:py-20">
-              <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold">{school?.district || 'Muzrabot tumani, Surxondaryo viloyati'}</span>
-              <h1 className="max-w-xl text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">51-sonli maktab — Muzrabot tumani</h1>
-              {intro && <p className="line-clamp-4 max-w-lg text-lg leading-relaxed text-white/90">{intro}</p>}
-              <div className="flex flex-wrap items-center gap-4 pt-1">
-                <Link href={banner?.link_url || '/aloqa'} className="btn-yellow">{banner?.button_text || 'Murojaat yuborish'} <ArrowRight className="h-4 w-4" /></Link>
-                {school?.working_hours && <span className="text-sm text-white/80">Qabul: {school.working_hours}</span>}
-              </div>
-            </div>
-            {heroImg && (
-              <div className="relative mx-auto w-full max-w-md self-end lg:max-w-none">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <Image src={heroImg} alt="Muzrabot tumani 51-sonli maktabi" fetchPriority="high" priority width={900} height={960} sizes="(max-width: 1024px) 100vw, 50vw" className="h-[22rem] w-full rounded-t-[10rem] object-cover lg:h-[30rem]" />
-                {data && data.teachers_count > 0 && (
-                  <div className="absolute -left-2 bottom-8 rounded-2xl bg-white px-5 py-3 text-ink shadow-xl">
-                    <p className="text-2xl font-extrabold text-brand-700">{data.teachers_count}</p>
-                    <p className="text-xs font-semibold text-slate-500">Pedagog xodim</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
+        <HeroSlider slides={slides} heading={school?.welcome_text?.trim() || undefined} district={school?.district || 'Muzrabot tumani, Surxondaryo viloyati'} workingHours={school?.working_hours || undefined} teachersCount={data?.teachers_count} />
       </div>
 
       <Marquee />
@@ -118,9 +102,9 @@ export default async function HomePage() {
           <p className="mt-3 text-slate-500">Voqealar, yutuqlar va e’lonlar — bir joyda.</p>
         </div>
         {!data ? (
-          <p className="card p-8 text-center text-slate-500">Ma’lumotlarni yuklab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.</p>
+          <EmptyState kind="error" />
         ) : news.length === 0 ? (
-          <p className="card p-8 text-center text-slate-500">Hozircha yangilik kiritilmagan.</p>
+          <EmptyState title="Yangiliklar yo‘q" text="Hozircha yangilik yoki e’lon kiritilmagan." />
         ) : (
           <>
             <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
@@ -142,9 +126,9 @@ export default async function HomePage() {
       </section>
 
       {/* Achievements */}
-      {achievements.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
           <h2 className="mb-8 text-center text-3xl font-extrabold tracking-tight sm:text-4xl">O‘quvchilar yutuqlari</h2>
+          {!data ? <EmptyState kind="error" /> : achievements.length === 0 ? <EmptyState icon={Trophy} title="Yutuqlar yo‘q" text="Hozircha o‘quvchilar yutuqlari kiritilmagan." /> : (<>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {achievements.slice(0, 6).map((a) => (
               <Link key={a.id} href="/yutuqlar" className="card group flex gap-4 p-4 transition hover:-translate-y-0.5">
@@ -160,8 +144,8 @@ export default async function HomePage() {
             ))}
           </div>
           <div className="mt-8 text-center"><Link href="/yutuqlar" className="btn-primary">Barcha yutuqlar <ArrowRight className="h-4 w-4" /></Link></div>
+          </>)}
         </section>
-      )}
 
       {/* Appeal */}
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
